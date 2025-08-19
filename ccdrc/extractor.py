@@ -629,7 +629,14 @@ class ClaudeContextExtractor:
         return extracted, stats
     
     def _get_message_content(self, msg: Dict) -> str:
-        """提取消息内容 - 改进版本处理更多消息类型"""
+        """提取消息内容 - 匹配Claude Code实际context计算
+        
+        包含所有会被Claude计入context的内容：
+        - 用户/助手的文本消息
+        - 思考内容(thinking)
+        - 工具调用的输入参数
+        - 工具结果（可能很大）
+        """
         texts = []
         
         def extract_all(obj, depth=0):
@@ -654,17 +661,19 @@ class ClaudeContextExtractor:
                                     text = item.get('text', '')
                                     if text:
                                         texts.append(text)
-                                # 思考内容
+                                # 思考内容 - Claude会计入context
                                 elif item.get('type') == 'thinking':
                                     thinking = item.get('thinking', '')
                                     if thinking:
                                         texts.append(f"[Thinking] {thinking}")
-                                # 工具使用
+                                # 工具使用 - 包含完整输入（Claude会计入context）
                                 elif item.get('type') == 'tool_use':
                                     tool_name = item.get('name', 'unknown')
                                     tool_input = item.get('input', {})
-                                    texts.append(f"[Tool: {tool_name}] {json.dumps(tool_input) if isinstance(tool_input, dict) else str(tool_input)}")
-                                # 工具结果
+                                    # 将工具输入转为文本（这会被计入context）
+                                    input_text = json.dumps(tool_input) if isinstance(tool_input, dict) else str(tool_input)
+                                    texts.append(f"[Tool: {tool_name}] {input_text}")
+                                # 工具结果 - 完整包含（Claude会计入context）
                                 elif item.get('type') == 'tool_result':
                                     result_content = item.get('content', '')
                                     if isinstance(result_content, list):
