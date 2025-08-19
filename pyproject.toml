@@ -1,0 +1,53 @@
+[project]
+name = "ccdrc"
+version = "3.6.1"
+description = "Claude Context Resume Tool - Smart context extraction for Claude Code sessions"
+authors = [
+    {name = "jiangying000", email = ""},
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "tiktoken>=0.5.0",
+]
+keywords = ["claude", "ai", "context", "token", "optimization"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Text Processing",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/jiangying000/ccdrc"
+Repository = "https://github.com/jiangying000/ccdrc"
+Issues = "https://github.com/jiangying000/ccdrc/issues"
+
+[project.scripts]
+ccdrc = "ccdrc.cli:ccdrc"
+ccdrc-extract = "ccdrc.cli:ccdrc_extract"
+ccdrc-interactive = "ccdrc.cli:ccdrc_interactive"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["ccdrc"]
