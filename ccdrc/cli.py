@@ -10,7 +10,7 @@ from .extractor import main
 def ccdrc():
     """Main entry point - always interactive session selector"""
     # Always use interactive mode (no auto-send)
-    sys.argv = ['ccdrc', '--interactive']
+    sys.argv = ['ccdrc']
     main()
 
 def ccdrc_extract():
@@ -19,7 +19,7 @@ def ccdrc_extract():
 
 def ccdrc_interactive():
     """Interactive entry point"""
-    sys.argv = ['ccdrc-interactive', '--interactive']
+    sys.argv = ['ccdrc-interactive']
     main()
 
 if __name__ == '__main__':

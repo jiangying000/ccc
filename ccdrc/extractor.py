@@ -1068,7 +1068,7 @@ def main():
                     # 返回会话选择（重新运行主函数）
                     print("\n🔄 返回会话列表...", file=sys.stderr)
                     # 重新调用main函数
-                    sys.argv = ['ccdrc', '--interactive']
+                    sys.argv = ['ccdrc']
                     main()
                     return
                     
@@ -1102,7 +1102,7 @@ def main():
                         selected.unlink()  # 删除文件
                         print("✅ 空会话已删除", file=sys.stderr)
                         print("\n🔄 返回会话列表...", file=sys.stderr)
-                        sys.argv = ['ccdrc', '--interactive']
+                        sys.argv = ['ccdrc']
                         main()
                         return
                     except Exception as e:
@@ -1179,7 +1179,8 @@ def main():
         print(f"  压缩率: {stats['compression_ratio']:.1%}", file=sys.stderr)
     
     # 发送到Claude时需要确认（但交互模式选择后不需要）
-    need_confirm = (args.send or args.output == '/dev/stdout') and not args.interactive
+    # 现在总是交互模式，所以不需要再次确认
+    need_confirm = False
     
     if need_confirm:
         # 获取预览
@@ -1224,11 +1225,8 @@ def main():
                 elif choice == 'r':
                     # 重新选择会话
                     print("\n🔄 重新选择会话...", file=sys.stderr)
-                    # 设置为交互模式并重新运行
-                    args.interactive = True
-                    args.index = 0
                     # 递归调用main（实际上应该重构为循环）
-                    sys.argv = ['ccdrc-extract', '--interactive']
+                    sys.argv = ['ccdrc-extract']
                     if args.send:
                         sys.argv.append('--send')
                     if args.stats:
