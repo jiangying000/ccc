@@ -961,9 +961,6 @@ def main():
         
         selected = selected_info['path']
         
-        # 初始化压缩标志
-        force_compress = False
-        
         # 如果选中的会话还没有完整加载，现在加载
         if selected_info.get('needs_full_load') or selected_info['message_count'] == 0:
             print("⏳ 正在分析选中的会话...", file=sys.stderr)
@@ -971,7 +968,6 @@ def main():
             selected_info.update(full_info)
         
         # 显示详细的确认信息
-        RESUME_THRESHOLD = 150000
         
         # Avoid ANSI clear-screen sequences to prevent rendering issues on iOS Termius
         # Previously used: print("\033[2J\033[H", end='', file=sys.stderr)
@@ -1030,15 +1026,15 @@ def main():
             print("\n  [D] 删除此空会话 (Delete)", file=sys.stderr)
             print("  [B] 返回列表 (Back)", file=sys.stderr)
             print("  [Q] 退出 (Quit)", file=sys.stderr)
-        elif selected_info['tokens'] < RESUME_THRESHOLD:
-            print(f"✅ 会话较小 ({selected_info['tokens']:,} tokens < {RESUME_THRESHOLD:,})", file=sys.stderr)
+        elif selected_info['tokens'] < 100000:
+            print(f"✅ 会话较小 ({selected_info['tokens']:,} tokens < 100k)", file=sys.stderr)
             print("\n  [R] 直接恢复 (Resume) - 保留100%原始上下文", file=sys.stderr)
             print("      ⚡ 默认启用 --dangerously-skip-permissions", file=sys.stderr)
-            print("  [C] 智能压缩 (Compress) - 提取关键信息", file=sys.stderr)
+            print("  [C] 智能压缩 (Compress) - 小会话将直接恢复", file=sys.stderr)
             print("  [B] 返回列表 (Back)", file=sys.stderr)
             print("  [Q] 退出 (Quit)", file=sys.stderr)
         else:
-            print(f"⚠  会话较大 ({selected_info['tokens']:,} tokens >= {RESUME_THRESHOLD:,})", file=sys.stderr)
+            print(f"📊 会话大小: {selected_info['tokens']:,} tokens", file=sys.stderr)
             print("\n  [R] 直接恢复 (Resume) - 保留100%原始上下文", file=sys.stderr)
             if selected_info['tokens'] > 200000:
                 print(f"      ⚠  警告: 会话超过200k限制，可能无法完全加载", file=sys.stderr)
@@ -1112,13 +1108,33 @@ def main():
                         print(f"❌ 删除失败: {e}", file=sys.stderr)
                         
                 elif choice == 'c' and selected_info['tokens'] > 0:
-                    # 进行压缩（只对非空会话）
-                    print(f"\n🗃  正在进行智能压缩...", file=sys.stderr)
-                    # 交互模式下，压缩后自动发送给Claude
-                    args.send = True
-                    # 设置标志，强制压缩（跳过150k判断）
-                    force_compress = True
-                    break  # 继续执行后续的压缩逻辑
+                    # 用户选择压缩
+                    if selected_info['tokens'] < 100000:
+                        # <100k，直接恢复（压缩后结果一样）
+                        session_id = selected.stem
+                        print(f"\n✨ 会话较小（{selected_info['tokens']:,} tokens < 100k），直接恢复", file=sys.stderr)
+                        print(f"   （小会话压缩和恢复效果相同）", file=sys.stderr)
+                        print(f"⚡ 已启用 --dangerously-skip-permissions 跳过权限检查", file=sys.stderr)
+                        
+                        import subprocess
+                        try:
+                            result = subprocess.run(
+                                ['claude', '--resume', session_id, '--dangerously-skip-permissions'],
+                                text=False
+                            )
+                            sys.exit(result.returncode)
+                        except FileNotFoundError:
+                            print("❌ 找不到 claude 命令，请确保已安装 Claude CLI", file=sys.stderr)
+                            sys.exit(1)
+                        except Exception as e:
+                            print(f"❌ 恢复会话失败: {e}", file=sys.stderr)
+                            sys.exit(1)
+                    else:
+                        # >=100k，进行压缩
+                        print(f"\n🗃  正在进行智能压缩...", file=sys.stderr)
+                        # 交互模式下，压缩后自动发送给Claude
+                        args.send = True
+                        break  # 继续执行后续的压缩逻辑
                     
                 else:
                     if selected_info['tokens'] == 0 or selected_info['message_count'] <= 2:
@@ -1130,7 +1146,7 @@ def main():
                 print("\n\n👋 已退出", file=sys.stderr)
                 sys.exit(0)
     
-    # 解析会话
+    # 解析会话（用户已经在交互界面选择了压缩，且tokens>=100k）
     if args.stats:
         print(f"\n📖 解析会话: {selected.name}", file=sys.stderr)
     
@@ -1140,39 +1156,11 @@ def main():
         print("❌ 会话文件为空或格式错误", file=sys.stderr)
         sys.exit(1)
     
-    # 使用selected_info中的tokens（已包含系统开销），确保与显示一致
+    # 获取token数用于显示
     total_tokens = selected_info.get('tokens', 0)
     
-    # 判断是否需要压缩（阈值：150k tokens）
-    RESUME_THRESHOLD = 150000
-    
-    # 如果用户主动选择了压缩，或者tokens超过阈值，则进行压缩
-    if not force_compress and total_tokens < RESUME_THRESHOLD:
-        # 小于 150k，直接使用 --resume 恢复原始会话
-        session_id = selected.stem  # 从文件名获取 UUID（去掉 .jsonl 后缀）
-        
-        print(f"\n✨ 会话较小（{total_tokens:,} tokens < {RESUME_THRESHOLD:,}），直接恢复原始会话", file=sys.stderr)
-        print(f"📌 会话ID: {session_id}", file=sys.stderr)
-        print(f"⚡ 已启用 --dangerously-skip-permissions 跳过权限检查", file=sys.stderr)
-        
-        # 使用 claude --resume 命令
-        import subprocess
-        try:
-            # 执行 claude --resume 命令（默认启用 --dangerously-skip-permissions）
-            result = subprocess.run(
-                ['claude', '--resume', session_id, '--dangerously-skip-permissions'],
-                text=False
-            )
-            sys.exit(result.returncode)
-        except FileNotFoundError:
-            print("❌ 找不到 claude 命令，请确保已安装 Claude CLI", file=sys.stderr)
-            sys.exit(1)
-        except Exception as e:
-            print(f"❌ 恢复会话失败: {e}", file=sys.stderr)
-            sys.exit(1)
-    
-    # 大于等于 150k，继续压缩流程
-    print(f"\n⚠  会话较大（{total_tokens:,} tokens >= {RESUME_THRESHOLD:,}），需要压缩", file=sys.stderr)
+    # 执行到这里说明用户选择了C且tokens>=100k，直接进行压缩
+    print(f"\n⚠  正在压缩会话（{total_tokens:,} tokens）", file=sys.stderr)
     
     # 提取关键消息
     extracted, stats = extractor.extract_key_messages(messages)

@@ -1,6 +1,6 @@
 [project]
 name = "ccdrc"
-version = "3.8.1"
+version = "3.8.2"
 description = "Claude Context Resume Tool - Smart context extraction for Claude Code sessions"
 authors = [
     {name = "jiangying000", email = ""},
