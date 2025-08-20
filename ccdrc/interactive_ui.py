@@ -58,13 +58,15 @@ class InteractiveSessionSelector:
             session = self.sessions[i]
             local_idx = i - start_idx  # 本页内的索引 (0-2)
             
-            print(f"\n[{local_idx}] ", end='', file=sys.stderr)
+            # 使用1-3的索引，更符合日常习惯
+            display_idx = local_idx + 1  # 显示为1-3而非0-2
+            print(f"\n[{display_idx}] ", end='', file=sys.stderr)
             self._display_session(session)
         
         # 显示帮助信息（增加空白）
         print("\n" + "─" * 60, file=sys.stderr)
         help_items = []
-        help_items.append("0-2:选择会话")
+        help_items.append("1-3:选择会话")
         if self.current_page < self.total_pages - 1:
             help_items.append("n:下一页")
         if self.current_page > 0:
@@ -203,10 +205,11 @@ class InteractiveSessionSelector:
                 print("\n👋 已退出", file=sys.stderr)
                 return None
             
-            # 数字选择
+            # 数字选择（接受1-3的输入，映射到0-2的索引）
             if ch.isdigit():
-                idx = int(ch)
-                if idx < self.page_size:
+                display_idx = int(ch)
+                if 1 <= display_idx <= self.page_size:  # 接受1-3
+                    idx = display_idx - 1  # 转换为0-2的索引
                     actual_idx = self.current_page * self.page_size + idx
                     if actual_idx < len(self.sessions):
                         return self.sessions[actual_idx]

@@ -866,13 +866,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     
-    parser.add_argument(
-        '--index', '-i',
-        type=int,
-        default=0,
-        help='会话索引（0=最新，1=第二新，以此类推）'
-    )
-    
+    # 简化：默认就是交互模式
     parser.add_argument(
         '--tokens', '-t',
         type=int,
@@ -885,12 +879,6 @@ def main():
         type=str,
         default=None,
         help='输出文件路径（默认输出到终端）'
-    )
-    
-    parser.add_argument(
-        '--interactive',
-        action='store_true',
-        help='交互式选择会话'
     )
     
     parser.add_argument(
@@ -923,8 +911,8 @@ def main():
         print("❌ 未找到Claude会话文件", file=sys.stderr)
         sys.exit(1)
     
-    # 选择会话
-    if args.interactive:
+    # 默认进入交互式选择（简化流程）
+    if True:  # 总是使用交互模式
         # 使用新的分页UI
         from .interactive_ui import InteractiveSessionSelector
         
@@ -1134,11 +1122,6 @@ def main():
             except KeyboardInterrupt:
                 print("\n\n👋 已退出", file=sys.stderr)
                 sys.exit(0)
-    else:
-        if args.index >= len(sessions):
-            print(f"❌ 索引{args.index}超出范围（共{len(sessions)}个会话）", file=sys.stderr)
-            sys.exit(1)
-        selected = sessions[args.index]
     
     # 解析会话
     if args.stats:
@@ -1150,12 +1133,8 @@ def main():
         print("❌ 会话文件为空或格式错误", file=sys.stderr)
         sys.exit(1)
     
-    # 计算原始 tokens
-    total_tokens = 0
-    for msg in messages:
-        content = extractor._get_message_content(msg)
-        if content:
-            total_tokens += extractor.count_tokens(content)
+    # 使用selected_info中的tokens（已包含系统开销），确保与显示一致
+    total_tokens = selected_info.get('tokens', 0)
     
     # 判断是否需要压缩（阈值：150k tokens）
     RESUME_THRESHOLD = 150000
