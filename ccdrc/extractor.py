@@ -961,6 +961,9 @@ def main():
         
         selected = selected_info['path']
         
+        # 初始化压缩标志
+        force_compress = False
+        
         # 如果选中的会话还没有完整加载，现在加载
         if selected_info.get('needs_full_load') or selected_info['message_count'] == 0:
             print("⏳ 正在分析选中的会话...", file=sys.stderr)
@@ -1111,6 +1114,10 @@ def main():
                 elif choice == 'c' and selected_info['tokens'] > 0:
                     # 进行压缩（只对非空会话）
                     print(f"\n🗃  正在进行智能压缩...", file=sys.stderr)
+                    # 交互模式下，压缩后自动发送给Claude
+                    args.send = True
+                    # 设置标志，强制压缩（跳过150k判断）
+                    force_compress = True
                     break  # 继续执行后续的压缩逻辑
                     
                 else:
@@ -1139,7 +1146,8 @@ def main():
     # 判断是否需要压缩（阈值：150k tokens）
     RESUME_THRESHOLD = 150000
     
-    if total_tokens < RESUME_THRESHOLD:
+    # 如果用户主动选择了压缩，或者tokens超过阈值，则进行压缩
+    if not force_compress and total_tokens < RESUME_THRESHOLD:
         # 小于 150k，直接使用 --resume 恢复原始会话
         session_id = selected.stem  # 从文件名获取 UUID（去掉 .jsonl 后缀）
         
@@ -1169,14 +1177,12 @@ def main():
     # 提取关键消息
     extracted, stats = extractor.extract_key_messages(messages)
     
-    # 显示统计
-    if args.stats:
-        print(f"\n📊 统计信息:", file=sys.stderr)
-        print(f"  原始消息: {stats['total_messages']}条", file=sys.stderr)
-        print(f"  提取消息: {stats['extracted_messages']}条", file=sys.stderr)
-        print(f"  原始tokens: {stats['total_tokens']}", file=sys.stderr)
-        print(f"  提取tokens: {stats['extracted_tokens']}", file=sys.stderr)
-        print(f"  压缩率: {stats['compression_ratio']:.1%}", file=sys.stderr)
+    # 显示统计（交互模式下总是显示）
+    print(f"\n📊 压缩统计:", file=sys.stderr)
+    print(f"  原始: {stats['total_messages']}条消息, {stats['total_tokens']:,} tokens", file=sys.stderr)
+    print(f"  压缩后: {stats['extracted_messages']}条消息, {stats['extracted_tokens']:,} tokens", file=sys.stderr)
+    print(f"  压缩率: {stats['compression_ratio']:.1%}", file=sys.stderr)
+    print(f"  使用{extractor.encoder.name}编码器，提取了{stats['extracted_tokens']}个token", file=sys.stderr)
     
     # 发送到Claude时需要确认（但交互模式选择后不需要）
     # 现在总是交互模式，所以不需要再次确认
