@@ -174,18 +174,9 @@ class InteractiveSessionSelector:
     
     def get_single_char(self):
         """获取单个字符输入"""
-        if not TERMIOS_AVAILABLE:
-            # 回退到普通input
-            return input("\n👉 ").strip().lower()
-        
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
+        # ULTIMATE FIX: 完全避免termios，它会破坏claude的token显示
+        # 使用普通input，虽然需要按回车，但保证终端状态完整
+        return input("\n👉 ").strip().lower()[:1] if input else ''
     
     def run(self) -> Optional[Dict]:
         """运行交互式选择器，返回选中的会话"""

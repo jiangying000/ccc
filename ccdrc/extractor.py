@@ -1061,19 +1061,15 @@ def main():
                         print("   继续恢复可能会因为超出限制而失败", file=sys.stderr)
                     print(f"⚡ 已启用 --dangerously-skip-permissions 跳过权限检查", file=sys.stderr)
                     
-                    import subprocess
-                    try:
-                        result = subprocess.run(
-                            ['claude', '--resume', session_id, '--dangerously-skip-permissions'],
-                            text=False
-                        )
-                        sys.exit(result.returncode)
-                    except FileNotFoundError:
-                        print("❌ 找不到 claude 命令，请确保已安装 Claude CLI", file=sys.stderr)
-                        sys.exit(1)
-                    except Exception as e:
-                        print(f"❌ 恢复会话失败: {e}", file=sys.stderr)
-                        sys.exit(1)
+                    # FIX: 使用os.system保持终端状态，确保token显示
+                    import os
+                    # 强制刷新所有缓冲区
+                    sys.stdout.flush()
+                    sys.stderr.flush()
+                    # 添加--verbose确保token显示
+                    cmd = f'claude --resume {session_id} --verbose --dangerously-skip-permissions'
+                    exit_code = os.system(cmd)
+                    sys.exit(exit_code >> 8)
                         
                 elif choice == 'd' and (selected_info['tokens'] == 0 or selected_info['message_count'] <= 2):
                     # 删除空会话
@@ -1097,19 +1093,15 @@ def main():
                         print(f"   （小会话压缩和恢复效果相同）", file=sys.stderr)
                         print(f"⚡ 已启用 --dangerously-skip-permissions 跳过权限检查", file=sys.stderr)
                         
-                        import subprocess
-                        try:
-                            result = subprocess.run(
-                                ['claude', '--resume', session_id, '--dangerously-skip-permissions'],
-                                text=False
-                            )
-                            sys.exit(result.returncode)
-                        except FileNotFoundError:
-                            print("❌ 找不到 claude 命令，请确保已安装 Claude CLI", file=sys.stderr)
-                            sys.exit(1)
-                        except Exception as e:
-                            print(f"❌ 恢复会话失败: {e}", file=sys.stderr)
-                            sys.exit(1)
+                        # FIX: 使用os.system保持终端状态，确保token显示
+                        import os
+                        # 强制刷新所有缓冲区
+                        sys.stdout.flush()
+                        sys.stderr.flush()
+                        # 添加--verbose确保token显示
+                        cmd = f'claude --resume {session_id} --verbose --dangerously-skip-permissions'
+                        exit_code = os.system(cmd)
+                        sys.exit(exit_code >> 8)
                     else:
                         # >=100k，进行压缩
                         print(f"\n🗃  正在进行智能压缩...", file=sys.stderr)
@@ -1227,21 +1219,28 @@ def main():
             print(f"✅ 已保存到: {args.output}", file=sys.stderr)
     elif args.send:
         # 通过管道发送到Claude
-        import subprocess
+        # FIX: 使用os.system和临时文件保持终端状态
+        import os
+        import tempfile
         print("\n🚀 正在启动Claude...\n", file=sys.stderr)
         
-        # 不要capture_output，让Claude的输出直接显示
-        result = subprocess.run(
-            ['claude', '--dangerously-skip-permissions'],
-            input=summary.encode('utf-8'),
-            text=False
-        )
+        # 创建临时文件存储内容
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as tf:
+            tf.write(summary)
+            temp_path = tf.name
         
-        # Claude已经退出，根据返回码判断
-        if result.returncode == 0:
-            print("\n✅ Claude会话已结束", file=sys.stderr)
-        else:
-            print(f"\n⚠  Claude退出代码: {result.returncode}", file=sys.stderr)
+        try:
+            # 使用os.system确保终端状态正确传递
+            exit_code = os.system(f'cat "{temp_path}" | claude --dangerously-skip-permissions')
+            exit_code = exit_code >> 8  # 获取实际退出码
+            
+            # Claude已经退出，根据返回码判断
+            if exit_code == 0:
+                print("\n✅ Claude会话已结束", file=sys.stderr)
+            else:
+                print(f"\n⚠  Claude退出代码: {exit_code}", file=sys.stderr)
+        finally:
+            os.unlink(temp_path)
     else:
         print(summary)
 

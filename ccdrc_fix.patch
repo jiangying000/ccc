@@ -1,0 +1,20 @@
+--- a/ccdrc/interactive_ui.py
++++ b/ccdrc/interactive_ui.py
+@@ -182,7 +182,11 @@ class InteractiveSessionSelector:
+         fd = sys.stdin.fileno()
+         old_settings = termios.tcgetattr(fd)
+         try:
+-            tty.setraw(sys.stdin.fileno())
++            # FIX: 使用setcbreak而非setraw，避免破坏终端状态
++            # setraw会完全禁用终端处理，导致后续claude的token显示消失
++            # setcbreak保留了更多终端功能，只是禁用了行缓冲
++            tty.setcbreak(sys.stdin.fileno())
+             ch = sys.stdin.read(1)
+         finally:
+-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
++            # FIX: 使用TCSANOW立即恢复，而非TCSADRAIN等待输出完成
++            termios.tcsetattr(fd, termios.TCSANOW, old_settings)
++            # FIX: 强制刷新缓冲区，确保终端状态完全恢复
++            sys.stdout.flush()
++            sys.stderr.flush()
+         return ch
