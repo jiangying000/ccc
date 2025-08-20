@@ -451,44 +451,25 @@ class ClaudeContextExtractor:
             if len(messages) > 10:
                 info['last_messages'] = self.extract_meaningful_messages(messages[-30:], count=5)
             
-            # 计算总tokens - 匹配Claude API的实际计算方式
-            # Claude计算的是完整的API消息格式，不只是文本内容
+            # 计算总tokens - 与Claude Code显示保持一致
+            # Claude Code只计算纯文本内容，不包含JSON结构
             total_tokens = 0
             
             for msg in messages:
-                try:
-                    # Claude API格式：包含role和content的完整JSON结构
-                    if 'message' in msg and isinstance(msg['message'], dict):
-                        message = msg['message']
-                        
-                        # 构建API格式的消息（这是Claude实际计算的内容）
-                        api_message = {
-                            'role': message.get('role', 'user'),
-                            'content': message.get('content', [])
-                        }
-                        
-                        # 计算完整消息的JSON（包含所有结构）
-                        import json
-                        message_json = json.dumps(api_message, ensure_ascii=False, separators=(',', ':'))
-                        tokens = self.count_tokens(message_json)
-                        total_tokens += tokens
-                    else:
-                        # 对于非标准消息，回退到内容提取
-                        content = self._get_message_content(msg)
-                        if content:
-                            tokens = self.count_tokens(content)
-                            total_tokens += tokens
-                except Exception:
-                    # 如果计算失败，使用基本内容提取
-                    content = self._get_message_content(msg)
-                    if content:
+                # 提取纯文本内容（与Claude Code一致）
+                content = self._get_message_content(msg)
+                if content:
+                    try:
                         tokens = self.count_tokens(content)
                         total_tokens += tokens
+                    except Exception:
+                        # 如果计算失败，使用基本估算
+                        # 平均每4个字符一个token（保守估算）
+                        total_tokens += len(content) // 4
             
-            # 加上系统提示和其他开销的估计值
-            # Claude Code的系统提示非常长，包含大量指令和上下文
-            # 基于实测数据：实际tokens约比消息内容多20-25k
-            SYSTEM_OVERHEAD_TOKENS = 23000
+            # 加上系统提示的估计值
+            # 基于实测：Claude Code约加20k系统开销
+            SYSTEM_OVERHEAD_TOKENS = 20000
             total_tokens += SYSTEM_OVERHEAD_TOKENS
             
             info['tokens'] = total_tokens
