@@ -1308,8 +1308,8 @@ def main():
             temp_path = tf.name
         
         try:
-            # 使用os.system确保终端状态正确传递
-            exit_code = os.system(f'cat "{temp_path}" | claude --dangerously-skip-permissions')
+            # 使用os.system确保终端状态正确传递，添加--verbose确保token显示
+            exit_code = os.system(f'cat "{temp_path}" | claude --verbose --dangerously-skip-permissions')
             exit_code = exit_code >> 8  # 获取实际退出码
             
             # Claude已经退出，根据返回码判断
