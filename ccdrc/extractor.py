@@ -462,64 +462,92 @@ class ClaudeContextExtractor:
             if len(messages) > 10:
                 info['last_messages'] = self.extract_meaningful_messages(messages[-30:], count=5)
             
-            # 计算总tokens - 准确版（基于逆向工程）
-            # Claude实际处理完整的JSONL，包括所有元数据和结构
+            # 准确计算：只算内容，不算JSON结构
             total_tokens = 0
-            total_json_chars = 0
-            text_content_chars = 0
             
-            for msg in messages:
-                # 计算完整消息的JSON大小（这才是Claude实际处理的）
-                try:
-                    msg_json = json.dumps(msg, ensure_ascii=False, separators=(',', ':'))
-                    total_json_chars += len(msg_json)
-                except:
-                    # 如果序列化失败，使用估算
-                    total_json_chars += 1000  # 平均每条消息的基础大小
+            if self.verbose:
+                print(f"  开始计算tokens，消息数: {len(messages)}", file=sys.stderr)
+            
+            if self.encoder:
+                # 收集所有实际内容文本
+                all_texts = []
                 
-                # 提取纯文本用于统计（但不只用它计算token）
-                content = self._get_message_content(msg)
-                if content:
-                    text_content_chars += len(content)
-            
-            # Token计算公式（基于逆向工程）
-            # 文本部分：约3.5字符/token
-            # JSON结构部分：约2.5字符/token
-            # 总体调整系数：1.09（补偿Claude的编码差异）
-            
-            if total_json_chars > 0:
-                text_tokens = text_content_chars / 3.5
-                structure_chars = total_json_chars - text_content_chars
-                structure_tokens = structure_chars / 2.5
+                for msg in messages:
+                    try:
+                        # 提取不同类型的内容
+                        msg_type = msg.get('type', '')
+                        
+                        # 1. 处理message字段中的内容
+                        if 'message' in msg:
+                            message = msg['message']
+                            
+                            # 提取content
+                            if 'content' in message:
+                                content = message['content']
+                                if isinstance(content, list):
+                                    for item in content:
+                                        if isinstance(item, dict):
+                                            # 文本内容
+                                            if 'text' in item:
+                                                all_texts.append(item['text'])
+                                            # thinking内容（重要！）
+                                            if 'thinking' in item:
+                                                all_texts.append(item['thinking'])
+                                            # signature签名（全部计入）
+                                            if 'signature' in item:
+                                                all_texts.append(item['signature'])
+                                            # tool输入参数
+                                            if 'input' in item and isinstance(item['input'], dict):
+                                                for value in item['input'].values():
+                                                    if isinstance(value, str):
+                                                        all_texts.append(value)
+                                            # 嵌套的content
+                                            if 'content' in item and isinstance(item['content'], str):
+                                                all_texts.append(item['content'])
+                                elif isinstance(content, str):
+                                    all_texts.append(content)
+                        
+                        # 2. 处理toolUseResult字段（工具执行结果）
+                        if 'toolUseResult' in msg:
+                            result = msg['toolUseResult']
+                            # stdout/stderr输出
+                            for key in ['stdout', 'stderr', 'output', 'error', 'result']:
+                                if key in result and isinstance(result[key], str):
+                                    all_texts.append(result[key])
+                            # results数组
+                            if 'results' in result and isinstance(result['results'], list):
+                                for r in result['results']:
+                                    if isinstance(r, str):
+                                        all_texts.append(r)
+                            # file内容
+                            if 'file' in result and isinstance(result['file'], dict):
+                                if 'content' in result['file']:
+                                    all_texts.append(result['file']['content'])
+                        
+                        # 3. 处理summary字段
+                        if 'summary' in msg:
+                            all_texts.append(msg['summary'])
+                            
+                    except Exception as e:
+                        if self.verbose:
+                            print(f"  ⚠ 处理消息失败: {str(e)[:50]}", file=sys.stderr)
+                        continue
                 
-                # 应用调整系数（基于实测139k vs 计算127k）
-                ADJUSTMENT_FACTOR = 1.09
-                total_tokens = int((text_tokens + structure_tokens) * ADJUSTMENT_FACTOR)
+                # 计算所有文本的tokens
+                if all_texts:
+                    combined_text = ' '.join(all_texts)
+                    tokens = self.encoder.encode(combined_text)
+                    total_tokens = len(tokens)
+                    
             else:
-                # 降级到旧的计算方式
-                total_tokens = 20000  # 基础系统开销
-            
-            # 确保在合理范围内
-            # 基于文件大小的上下限（经验值）
-            file_size_kb = session_path.stat().st_size / 1024
-            min_tokens = int(file_size_kb * 50)   # 1KB至少50tokens
-            
-            # 动态上限：小文件允许更高的token密度
-            if file_size_kb < 500:  # 小于500KB
-                max_tokens = int(file_size_kb * 350)  # 允许高密度（如summary）
-            elif file_size_kb < 1000:  # 500KB-1MB
-                max_tokens = int(file_size_kb * 200)  # 中等密度
-            else:  # 大于1MB
-                max_tokens = int(file_size_kb * 130)  # 限制密度（防止工具调用高估）
-            
-            # 限制在合理范围内
-            total_tokens = max(min_tokens, min(total_tokens, max_tokens))
+                # 没有tokenizer，用简单估算
+                for msg in messages:
+                    total_tokens += len(str(msg)) // 10
             
             info['tokens'] = total_tokens
             
         except Exception as e:
             # 记录错误但不崩溃
-            import sys
             print(f"  ⚠  计算会话信息时出错: {str(e)[:50]}", file=sys.stderr)
         
         return info
