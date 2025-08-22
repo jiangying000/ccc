@@ -462,26 +462,47 @@ class ClaudeContextExtractor:
             if len(messages) > 10:
                 info['last_messages'] = self.extract_meaningful_messages(messages[-30:], count=5)
             
-            # 计算总tokens - 与Claude Code显示保持一致
-            # Claude Code只计算纯文本内容，不包含JSON结构
+            # 计算总tokens - 准确版（基于逆向工程）
+            # Claude实际处理完整的JSONL，包括所有元数据和结构
             total_tokens = 0
+            total_json_chars = 0
+            text_content_chars = 0
             
             for msg in messages:
-                # 提取纯文本内容（与Claude Code一致）
+                # 计算完整消息的JSON大小（这才是Claude实际处理的）
+                try:
+                    msg_json = json.dumps(msg, ensure_ascii=False, separators=(',', ':'))
+                    total_json_chars += len(msg_json)
+                except:
+                    # 如果序列化失败，使用估算
+                    total_json_chars += 1000  # 平均每条消息的基础大小
+                
+                # 提取纯文本用于统计（但不只用它计算token）
                 content = self._get_message_content(msg)
                 if content:
-                    try:
-                        tokens = self.count_tokens(content)
-                        total_tokens += tokens
-                    except Exception:
-                        # 如果计算失败，使用基本估算
-                        # 平均每4个字符一个token（保守估算）
-                        total_tokens += len(content) // 4
+                    text_content_chars += len(content)
             
-            # 加上系统提示的估计值
-            # 基于实测：Claude Code约加20k系统开销
-            SYSTEM_OVERHEAD_TOKENS = 20000
-            total_tokens += SYSTEM_OVERHEAD_TOKENS
+            # Token计算公式（基于逆向工程）
+            # 文本部分：约3.5字符/token
+            # JSON结构部分：约2.5字符/token
+            # 总体调整系数：1.09（补偿Claude的编码差异）
+            
+            if total_json_chars > 0:
+                text_tokens = text_content_chars / 3.5
+                structure_chars = total_json_chars - text_content_chars
+                structure_tokens = structure_chars / 2.5
+                
+                # 应用调整系数（基于实测139k vs 计算127k）
+                ADJUSTMENT_FACTOR = 1.09
+                total_tokens = int((text_tokens + structure_tokens) * ADJUSTMENT_FACTOR)
+            else:
+                # 降级到旧的计算方式
+                total_tokens = 20000  # 基础系统开销
+            
+            # 确保不会严重低估
+            # 最小值：基于文件大小的保守估算
+            min_tokens = int(session_path.stat().st_size / 1024 * 50)  # 1KB至少50tokens
+            total_tokens = max(total_tokens, min_tokens)
             
             info['tokens'] = total_tokens
             
