@@ -507,7 +507,75 @@ class ClaudeContextExtractor:
         except Exception as e:
             print(f"⚠  读取会话失败: {e}", file=sys.stderr)
         
+        # 清理工具调用JSON污染（保留正常JSON）
+        if messages and self.verbose:
+            print(f"  🧹 清理工具调用JSON污染...", file=sys.stderr)
+        messages = self._clean_tool_call_pollution(messages)
+        
         return messages
+    
+    def _clean_tool_call_pollution(self, messages: List[Dict]) -> List[Dict]:
+        """清理工具调用JSON污染，保留正常的JSON数据"""
+        import re
+        import copy
+        
+        def clean_tool_json(text: str) -> str:
+            """只清理工具调用JSON，保留其他JSON"""
+            if not text or '[Tool:' not in text:
+                return text
+            
+            # 清理模式：[Tool: Name] {json with specific keys}
+            # 只清理包含工具调用特征键的JSON
+            patterns = [
+                # Write工具
+                (r'\[Tool:\s*Write\]\s*\{[^}]*"file_path"[^}]*"content"[^}]*\}', '[Created file]'),
+                # Edit工具
+                (r'\[Tool:\s*Edit\]\s*\{[^}]*"file_path"[^}]*"old_string"[^}]*\}', '[Edited file]'),
+                # Bash工具
+                (r'\[Tool:\s*Bash\]\s*\{[^}]*"command"[^}]*\}', '[Executed command]'),
+                # Grep工具
+                (r'\[Tool:\s*Grep\]\s*\{[^}]*"pattern"[^}]*\}', '[Searched]'),
+                # 通用工具JSON（包含input键）
+                (r'\[Tool:\s*(\w+)\]\s*\{[^}]*"input"[^}]*\}', r'[Used tool: \1]'),
+                # 其他明显的工具调用
+                (r'\[Tool:\s*(\w+)\]\s*\{"[^"]+"\s*:\s*"[^"]+"\}', r'[Used tool: \1]'),
+            ]
+            
+            cleaned = text
+            for pattern, replacement in patterns:
+                cleaned = re.sub(pattern, replacement, cleaned, flags=re.DOTALL)
+            
+            return cleaned
+        
+        cleaned_messages = []
+        for msg in messages:
+            msg_copy = copy.deepcopy(msg)
+            
+            # 递归清理消息内容
+            def clean_recursive(obj):
+                if isinstance(obj, dict):
+                    for key, value in obj.items():
+                        if key == 'text' and isinstance(value, str):
+                            obj[key] = clean_tool_json(value)
+                        elif key == 'content':
+                            if isinstance(value, str):
+                                obj[key] = clean_tool_json(value)
+                            elif isinstance(value, list):
+                                for item in value:
+                                    if isinstance(item, dict) and item.get('type') == 'text':
+                                        if 'text' in item:
+                                            item['text'] = clean_tool_json(item['text'])
+                                    clean_recursive(item)
+                        elif isinstance(value, (dict, list)):
+                            clean_recursive(value)
+                elif isinstance(obj, list):
+                    for item in obj:
+                        clean_recursive(item)
+            
+            clean_recursive(msg_copy)
+            cleaned_messages.append(msg_copy)
+        
+        return cleaned_messages
     
     def extract_key_messages(self, messages: List[Dict]) -> Tuple[List[Dict], Dict]:
         """智能提取关键消息 - 前25k + 后75k策略"""
