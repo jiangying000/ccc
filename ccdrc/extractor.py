@@ -17,6 +17,17 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 
+# 导入工具调用净化器
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from tool_call_sanitizer import sanitize_tool_call, sanitize_tool_result
+except ImportError:
+    # 如果导入失败，提供简单的后备方案
+    def sanitize_tool_call(tool_name, tool_input):
+        return f"[Tool: {tool_name}]"
+    def sanitize_tool_result(result_content, max_length=100):
+        return "[Tool Result]"
+
 # Token计算方式
 try:
     import tiktoken
@@ -672,24 +683,23 @@ class ClaudeContextExtractor:
                                     thinking = item.get('thinking', '')
                                     if thinking:
                                         texts.append(f"[Thinking] {thinking}")
-                                # 工具使用 - 包含完整输入（Claude会计入context）
+                                # 工具使用 - 使用净化器避免JSON污染
                                 elif item.get('type') == 'tool_use':
                                     tool_name = item.get('name', 'unknown')
                                     tool_input = item.get('input', {})
-                                    # 将工具输入转为文本（这会被计入context）
-                                    input_text = json.dumps(tool_input) if isinstance(tool_input, dict) else str(tool_input)
-                                    texts.append(f"[Tool: {tool_name}] {input_text}")
-                                # 工具结果 - 完整包含（Claude会计入context）
+                                    # 使用净化器转换，避免JSON格式污染上下文
+                                    sanitized = sanitize_tool_call(tool_name, tool_input)
+                                    texts.append(sanitized)
+                                # 工具结果 - 使用净化器简化，避免过长内容
                                 elif item.get('type') == 'tool_result':
                                     result_content = item.get('content', '')
                                     if isinstance(result_content, list):
-                                        for r in result_content:
-                                            if isinstance(r, dict) and r.get('type') == 'text':
-                                                texts.append(f"[Tool Result] {r.get('text', '')}")
-                                            elif isinstance(r, str):
-                                                texts.append(f"[Tool Result] {r}")
+                                        # 多个结果，简化表示
+                                        texts.append(f"[Tool results: {len(result_content)} items]")
                                     elif result_content:
-                                        texts.append(f"[Tool Result] {str(result_content)}")
+                                        # 使用净化器简化结果
+                                        sanitized_result = sanitize_tool_result(str(result_content))
+                                        texts.append(sanitized_result)
                             elif isinstance(item, str):
                                 texts.append(item)
                     elif isinstance(content, str) and content:
