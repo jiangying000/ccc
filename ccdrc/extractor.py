@@ -499,10 +499,21 @@ class ClaudeContextExtractor:
                 # 降级到旧的计算方式
                 total_tokens = 20000  # 基础系统开销
             
-            # 确保不会严重低估
-            # 最小值：基于文件大小的保守估算
-            min_tokens = int(session_path.stat().st_size / 1024 * 50)  # 1KB至少50tokens
-            total_tokens = max(total_tokens, min_tokens)
+            # 确保在合理范围内
+            # 基于文件大小的上下限（经验值）
+            file_size_kb = session_path.stat().st_size / 1024
+            min_tokens = int(file_size_kb * 50)   # 1KB至少50tokens
+            
+            # 动态上限：小文件允许更高的token密度
+            if file_size_kb < 500:  # 小于500KB
+                max_tokens = int(file_size_kb * 350)  # 允许高密度（如summary）
+            elif file_size_kb < 1000:  # 500KB-1MB
+                max_tokens = int(file_size_kb * 200)  # 中等密度
+            else:  # 大于1MB
+                max_tokens = int(file_size_kb * 130)  # 限制密度（防止工具调用高估）
+            
+            # 限制在合理范围内
+            total_tokens = max(min_tokens, min(total_tokens, max_tokens))
             
             info['tokens'] = total_tokens
             
