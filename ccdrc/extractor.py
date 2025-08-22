@@ -811,6 +811,10 @@ class ClaudeContextExtractor:
                                     thinking = item.get('thinking', '')
                                     if thinking:
                                         texts.append(f"[Thinking] {thinking}")
+                                    # 同时提取signature字段（thinking的签名）
+                                    signature = item.get('signature', '')
+                                    if signature:
+                                        texts.append(f"[Signature] {signature}")
                                 # 工具使用 - 使用净化器避免JSON污染
                                 elif item.get('type') == 'tool_use':
                                     tool_name = item.get('name', 'unknown')
