@@ -176,7 +176,8 @@ class InteractiveSessionSelector:
         """获取单个字符输入"""
         # ULTIMATE FIX: 完全避免termios，它会破坏claude的token显示
         # 使用普通input，虽然需要按回车，但保证终端状态完整
-        return input("\n👉 ").strip().lower()[:1] if input else ''
+        user_input = input("\n👉 ").strip().lower()
+        return user_input[0] if user_input else ''
     
     def run(self) -> Optional[Dict]:
         """运行交互式选择器，返回选中的会话"""
@@ -191,8 +192,8 @@ class InteractiveSessionSelector:
                 print("\n👋 已退出", file=sys.stderr)
                 return None
             
-            # Ctrl+C退出
-            if ord(ch) == 3:
+            # Ctrl+C退出（检查ch非空）
+            if ch and ord(ch) == 3:
                 print("\n👋 已退出", file=sys.stderr)
                 return None
             
