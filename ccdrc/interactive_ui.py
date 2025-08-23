@@ -108,11 +108,11 @@ class InteractiveSessionSelector:
         # 第二行：核心数据（emoji后双空格，不用ANSI）
         tokens = session['tokens']
         if tokens >= 1000000:
-            tokens_str = f"{tokens/1000000:.1f}M"
+            tokens_str = f"≈{tokens/1000000:.1f}M"
         elif tokens >= 1000:
-            tokens_str = f"{tokens/1000:.1f}k"
+            tokens_str = f"≈{tokens/1000:.1f}k"
         else:
-            tokens_str = str(tokens)
+            tokens_str = f"≈{tokens}"
             
         # 统计信息（emoji后双空格，避免iOS Termius首位数字遮挡）
         size = session['size']
@@ -123,7 +123,7 @@ class InteractiveSessionSelector:
             
         # 使用中文顿号替代pipe，iOS Termius对pipe渲染有问题
         # Use an ideographic space (U+3000) after the emoji to avoid iOS Termius overlap with first digit
-        print(f"  📊　{session['message_count']}条消息、{tokens_str} tokens、{size_str}", file=sys.stderr)
+        print(f"  📊　{session['message_count']}条消息、{tokens_str} tokens(估)、{size_str}", file=sys.stderr)
         
         # 主题或分类（去除缩进，iOS Termius对缩进+emoji渲染有问题）
         if session.get('summaries'):

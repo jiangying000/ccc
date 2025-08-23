@@ -1102,7 +1102,7 @@ def main():
         mtime = datetime.fromtimestamp(selected_info['mtime'])
         print(f"\n⏰ 时间: {mtime.strftime('%Y-%m-%d %H:%M:%S')}", file=sys.stderr)
         print(f"📊 统计: {selected_info['message_count']} 条消息", file=sys.stderr)
-        print(f"💾 大小: {selected_info['tokens']:,} tokens", file=sys.stderr)
+        print(f"💾 大小: ≈{selected_info['tokens']:,} tokens(估算)", file=sys.stderr)
         
         if selected_info.get('summaries'):
             summary = selected_info['summaries'][0]
@@ -1150,21 +1150,21 @@ def main():
             print("  [B] 返回列表 (Back)", file=sys.stderr)
             print("  [Q] 退出 (Quit)", file=sys.stderr)
         elif selected_info['tokens'] < 100000:
-            print(f"✅ 会话较小 ({selected_info['tokens']:,} tokens < 100k)", file=sys.stderr)
+            print(f"✅ 会话较小 (≈{selected_info['tokens']:,} tokens < 100k)", file=sys.stderr)
             print("\n  [R] 直接恢复 (Resume) - 保留100%原始上下文", file=sys.stderr)
             print("      ⚡ 默认启用 --dangerously-skip-permissions", file=sys.stderr)
             print("  [C] 智能压缩 (Compress) - 小会话将直接恢复", file=sys.stderr)
             print("  [B] 返回列表 (Back)", file=sys.stderr)
             print("  [Q] 退出 (Quit)", file=sys.stderr)
         else:
-            print(f"📊 会话大小: {selected_info['tokens']:,} tokens", file=sys.stderr)
+            print(f"📊 会话大小: ≈{selected_info['tokens']:,} tokens(估算)", file=sys.stderr)
             print("\n  [R] 直接恢复 (Resume) - 保留100%原始上下文", file=sys.stderr)
             if selected_info['tokens'] > 200000:
                 print(f"      ⚠  警告: 会话超过200k限制，可能无法完全加载", file=sys.stderr)
             print("      ⚡ 默认启用 --dangerously-skip-permissions", file=sys.stderr)
             print("  [C] 智能压缩 (Compress) - 提取关键信息", file=sys.stderr)
-            print("      预计压缩后: 约 100,000 tokens", file=sys.stderr)
-            print("      (保留前25k + 后75k tokens)", file=sys.stderr)
+            print("      预计压缩后: ≈100,000 tokens(估算)", file=sys.stderr)
+            print("      (保留前≈25k + 后≈75k tokens)", file=sys.stderr)
             print("  [B] 返回列表 (Back)", file=sys.stderr)
             print("  [Q] 退出 (Quit)", file=sys.stderr)
         
@@ -1199,7 +1199,7 @@ def main():
                     session_id = selected.stem
                     print(f"\n🚀 正在使用 --resume 恢复会话...", file=sys.stderr)
                     if selected_info['tokens'] > 200000:
-                        print(f"⚠  警告: 会话包含 {selected_info['tokens']:,} tokens，超过Claude的200k限制", file=sys.stderr)
+                        print(f"⚠  警告: 会话包含 ≈{selected_info['tokens']:,} tokens(估算)，超过Claude的200k限制", file=sys.stderr)
                         print("   继续恢复可能会因为超出限制而失败", file=sys.stderr)
                     print(f"⚡ 已启用 --dangerously-skip-permissions 跳过权限检查", file=sys.stderr)
                     
@@ -1231,7 +1231,7 @@ def main():
                     if selected_info['tokens'] < 100000:
                         # <100k，直接恢复（压缩后结果一样）
                         session_id = selected.stem
-                        print(f"\n✨ 会话较小（{selected_info['tokens']:,} tokens < 100k），直接恢复", file=sys.stderr)
+                        print(f"\n✨ 会话较小（≈{selected_info['tokens']:,} tokens(估) < 100k），直接恢复", file=sys.stderr)
                         print(f"   （小会话压缩和恢复效果相同）", file=sys.stderr)
                         print(f"⚡ 已启用 --dangerously-skip-permissions 跳过权限检查", file=sys.stderr)
                         
@@ -1275,17 +1275,17 @@ def main():
     total_tokens = selected_info.get('tokens', 0)
     
     # 执行到这里说明用户选择了C且tokens>=100k，直接进行压缩
-    print(f"\n⚠  正在压缩会话（{total_tokens:,} tokens）", file=sys.stderr)
+    print(f"\n⚠  正在压缩会话（≈{total_tokens:,} tokens估算）", file=sys.stderr)
     
     # 提取关键消息
     extracted, stats = extractor.extract_key_messages(messages)
     
     # 显示统计（交互模式下总是显示）
     print(f"\n📊 压缩统计:", file=sys.stderr)
-    print(f"  原始: {stats['total_messages']}条消息, {stats['total_tokens']:,} tokens", file=sys.stderr)
-    print(f"  压缩后: {stats['extracted_messages']}条消息, {stats['extracted_tokens']:,} tokens", file=sys.stderr)
+    print(f"  原始: {stats['total_messages']}条消息, ≈{stats['total_tokens']:,} tokens(估)", file=sys.stderr)
+    print(f"  压缩后: {stats['extracted_messages']}条消息, ≈{stats['extracted_tokens']:,} tokens(估)", file=sys.stderr)
     print(f"  压缩率: {stats['compression_ratio']:.1%}", file=sys.stderr)
-    print(f"  使用{extractor.encoder.name}编码器，提取了{stats['extracted_tokens']}个token", file=sys.stderr)
+    print(f"  使用{extractor.encoder.name}编码器，提取了≈{stats['extracted_tokens']}个token(估算)", file=sys.stderr)
     
     # 发送到Claude时需要确认（但交互模式选择后不需要）
     # 现在总是交互模式，所以不需要再次确认
