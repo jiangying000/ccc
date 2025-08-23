@@ -28,8 +28,17 @@ class InteractiveSessionSelector:
         
     def display_page(self):
         """显示当前页"""
-        # Avoid ANSI clear-screen sequences to prevent rendering issues on iOS Termius
-        # Previously used: print("\033[2J\033[H", end='', file=sys.stderr)
+        # 智能清屏：默认清屏，除非设置了环境变量CCDRC_NO_CLEAR或在iOS Termius中
+        import os
+        no_clear = os.environ.get('CCDRC_NO_CLEAR', '').lower() in ('1', 'true', 'yes')
+        is_termius = 'TERMIUS' in os.environ.get('TERM_PROGRAM', '').upper()
+        
+        if not no_clear and not is_termius:
+            # 清屏并移动光标到左上角
+            print("\033[2J\033[H", end='', file=sys.stderr)
+        else:
+            # 不清屏时至少添加一些空行分隔
+            print("\n" * 2, file=sys.stderr)
         
         # 标题（iOS Termius优化：emoji后单空格）
         print("🚀 CCDRC - Claude Code会话压缩和恢复工具", file=sys.stderr)
