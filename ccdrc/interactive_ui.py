@@ -6,8 +6,10 @@ Interactive UI with pagination for CCDRC
 import sys
 import os
 import time
+import threading
 from typing import List, Dict, Optional
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 try:
     import termios
@@ -25,6 +27,11 @@ class InteractiveSessionSelector:
         self.current_page = 0
         self.total_pages = (len(sessions) + page_size - 1) // page_size
         self.extractor = extractor  # 用于延迟加载
+        
+        # 预加载相关
+        self.preload_executor = ThreadPoolExecutor(max_workers=2)
+        self.preload_futures = []
+        self.preload_lock = threading.Lock()
         
     def display_page(self):
         """显示当前页"""
@@ -196,43 +203,84 @@ class InteractiveSessionSelector:
             sys.stderr.write('\r\033[K')
             sys.stderr.flush()
     
+    def _preload_page(self, page_num: int):
+        """预加载指定页的会话信息"""
+        if page_num < 0 or page_num >= self.total_pages:
+            return
+        
+        start_idx = page_num * self.page_size
+        end_idx = min(start_idx + self.page_size, len(self.sessions))
+        
+        for i in range(start_idx, end_idx):
+            with self.preload_lock:
+                session = self.sessions[i]
+                
+                # 如果还没有加载完整信息，现在加载
+                if session.get('needs_full_load') and self.extractor:
+                    try:
+                        full_info = self.extractor.get_session_info(session['path'])
+                        full_info['path'] = session['path']
+                        self.sessions[i] = full_info
+                    except:
+                        pass  # 加载失败就用原来的基本信息
+    
+    def _start_preload(self):
+        """启动预加载下一页和上一页"""
+        # 取消之前的预加载任务
+        for future in self.preload_futures:
+            future.cancel()
+        self.preload_futures.clear()
+        
+        # 预加载相邻页面
+        if self.current_page > 0:
+            future = self.preload_executor.submit(self._preload_page, self.current_page - 1)
+            self.preload_futures.append(future)
+        
+        if self.current_page < self.total_pages - 1:
+            future = self.preload_executor.submit(self._preload_page, self.current_page + 1)
+            self.preload_futures.append(future)
+    
     def run(self) -> Optional[Dict]:
         """运行交互式选择器，返回选中的会话"""
-        while True:
-            self.display_page()
-            
-            # 获取用户输入
-            ch = self.get_single_char()
-            
-            # ESC或q退出
-            if ch in ['\x1b', 'q', 'Q']:
-                print("\n👋 已退出", file=sys.stderr)
-                return None
-            
-            # Ctrl+C退出（检查ch非空）
-            if ch and ord(ch) == 3:
-                print("\n👋 已退出", file=sys.stderr)
-                return None
-            
-            # 数字选择（接受1-3的输入，映射到0-2的索引）
-            if ch.isdigit():
-                display_idx = int(ch)
-                if 1 <= display_idx <= self.page_size:  # 接受1-3
-                    idx = display_idx - 1  # 转换为0-2的索引
-                    actual_idx = self.current_page * self.page_size + idx
-                    if actual_idx < len(self.sessions):
-                        return self.sessions[actual_idx]
-            
-            # n - 下一页
-            if ch in ['n', 'N'] and self.current_page < self.total_pages - 1:
-                self.current_page += 1
-            
-            # b - 上一页 (back)
-            if ch in ['b', 'B'] and self.current_page > 0:
-                self.current_page -= 1
-            
-            # g - 跳转到指定页面 (旧方式，保留兼容)
-            if ch in ['g', 'G']:
+        try:
+            while True:
+                self.display_page()
+                
+                # 启动预加载
+                self._start_preload()
+                
+                # 获取用户输入
+                ch = self.get_single_char()
+                
+                # ESC或q退出
+                if ch in ['\x1b', 'q', 'Q']:
+                    print("\n👋 已退出", file=sys.stderr)
+                    return None
+                
+                # Ctrl+C退出（检查ch非空）
+                if ch and ord(ch) == 3:
+                    print("\n👋 已退出", file=sys.stderr)
+                    return None
+                
+                # 数字选择（接受1-3的输入，映射到0-2的索引）
+                if ch.isdigit():
+                    display_idx = int(ch)
+                    if 1 <= display_idx <= self.page_size:  # 接受1-3
+                        idx = display_idx - 1  # 转换为0-2的索引
+                        actual_idx = self.current_page * self.page_size + idx
+                        if actual_idx < len(self.sessions):
+                            return self.sessions[actual_idx]
+                
+                # n - 下一页
+                if ch in ['n', 'N'] and self.current_page < self.total_pages - 1:
+                    self.current_page += 1
+                
+                # b - 上一页 (back)
+                if ch in ['b', 'B'] and self.current_page > 0:
+                    self.current_page -= 1
+                
+                # g - 跳转到指定页面 (旧方式，保留兼容)
+                if ch in ['g', 'G']:
                 # 显示输入提示
                 print("\n📋 输入页码 (1-{}):".format(self.total_pages), end=' ', file=sys.stderr)
                 sys.stderr.flush()
@@ -340,5 +388,62 @@ class InteractiveSessionSelector:
                             time.sleep(1)
                     except ValueError:
                         pass  # 忽略无效输入
-            
-            # 移除搜索功能
+                
+                # j - 开始页码跳转输入 (v2.0新功能: j20跳到第20页)
+                if ch in ['j', 'J']:
+                    # 读取后续数字
+                    page_input = ""
+                    print("\n➜ j", end='', file=sys.stderr)
+                    sys.stderr.flush()
+                    
+                    while True:
+                        if TERMIOS_AVAILABLE:
+                            fd = sys.stdin.fileno()
+                            old_settings = termios.tcgetattr(fd)
+                            try:
+                                tty.setraw(sys.stdin.fileno())
+                                next_ch = sys.stdin.read(1)
+                            finally:
+                                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                            
+                            # 数字继续输入
+                            if next_ch.isdigit():
+                                page_input += next_ch
+                                sys.stderr.write(next_ch)
+                                sys.stderr.flush()
+                            # 回车或空格结束输入
+                            elif ord(next_ch) in [13, 32]:  # Enter or Space
+                                break
+                            # ESC取消
+                            elif ord(next_ch) == 27:  # ESC
+                                page_input = ""
+                                break
+                            # 退格删除
+                            elif ord(next_ch) in [127, 8]:  # Backspace
+                                if page_input:
+                                    page_input = page_input[:-1]
+                                    sys.stderr.write('\b \b')
+                                    sys.stderr.flush()
+                            # 非数字字符结束输入
+                            else:
+                                break
+                        else:
+                            # 非终端环境
+                            page_input = input("输入页码: ").strip()
+                            break
+                    
+                    # 处理输入的页码
+                    if page_input:
+                        try:
+                            page_num = int(page_input)
+                            if 1 <= page_num <= self.total_pages:
+                                self.current_page = page_num - 1
+                            else:
+                                print(f"\n⚠  页码超出范围 (1-{self.total_pages})", file=sys.stderr)
+                                time.sleep(1)
+                        except ValueError:
+                            pass  # 忽略无效输入
+        
+        finally:
+            # 清理线程池
+            self.preload_executor.shutdown(wait=False)
