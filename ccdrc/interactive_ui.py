@@ -74,7 +74,7 @@ class InteractiveSessionSelector:
         help_items.append("j<数字>:跳页(如j20)")
         help_items.append("q:退出")
         
-        print(" | ".join(help_items), file=sys.stderr)
+        print(" | ".join(help_items) + " 👆直接按键", file=sys.stderr)
         
     def _display_session(self, session: Dict):
         """显示单个会话信息（最美观版）"""
@@ -173,11 +173,28 @@ class InteractiveSessionSelector:
         print("", file=sys.stderr)  # 会话之间增加空行
     
     def get_single_char(self):
-        """获取单个字符输入"""
-        # ULTIMATE FIX: 完全避免termios，它会破坏claude的token显示
-        # 使用普通input，虽然需要按回车，但保证终端状态完整
-        user_input = input("\n👉 ").strip().lower()
-        return user_input[0] if user_input else ''
+        """获取单个字符输入（无需回车）"""
+        import termios, tty
+        
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            # 设置为raw模式，立即读取单个字符
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+            
+            # 处理特殊键
+            if ch == '\x03':  # Ctrl+C
+                raise KeyboardInterrupt
+            
+            return ch.lower() if ch else ''
+        finally:
+            # 恢复终端设置
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            
+            # 清除当前行并重新显示提示（避免字符残留）
+            sys.stderr.write('\r\033[K')
+            sys.stderr.flush()
     
     def run(self) -> Optional[Dict]:
         """运行交互式选择器，返回选中的会话"""
