@@ -637,6 +637,50 @@ class ClaudeContextExtractor:
         
         return cleaned_messages
     
+    def _binary_search_truncate(self, content: str, target_tokens: int) -> str:
+        """使用二分查找精确切割内容到目标token数
+        
+        Args:
+            content: 要切割的内容
+            target_tokens: 目标token数
+        
+        Returns:
+            切割后的内容，确保token数不超过target_tokens
+        """
+        if not content:
+            return ""
+        
+        # 首先检查完整内容
+        full_tokens = self.count_tokens(content)
+        if full_tokens <= target_tokens:
+            return content
+        
+        # 二分查找最佳切割点
+        left, right = 0, len(content)
+        best_pos = 0
+        best_tokens = 0
+        
+        # 最多迭代20次避免无限循环
+        for _ in range(20):
+            if left >= right - 1:
+                break
+                
+            mid = (left + right) // 2
+            truncated = content[:mid]
+            tokens = self.count_tokens(truncated)
+            
+            if tokens <= target_tokens:
+                # 记录最佳位置
+                if tokens > best_tokens:
+                    best_pos = mid
+                    best_tokens = tokens
+                left = mid
+            else:
+                right = mid
+        
+        # 返回最佳切割
+        return content[:best_pos]
+    
     def extract_key_messages(self, messages: List[Dict]) -> Tuple[List[Dict], Dict]:
         """智能提取关键消息 - 前25k + 后75k策略"""
         if not messages:
@@ -683,13 +727,11 @@ class ClaudeContextExtractor:
                 # 需要切割这条消息
                 remaining_tokens = FRONT_TOKENS - front_token_count
                 if remaining_tokens > 100:  # 如果剩余空间足够（>100 tokens），进行切割
-                    # 计算需要切割的字符数（估算）
-                    char_ratio = len(content) / tokens if tokens > 0 else 4
-                    chars_to_take = int(remaining_tokens * char_ratio)
+                    # 使用二分查找精确切割内容
+                    truncated_content = self._binary_search_truncate(content, remaining_tokens)
                     
                     # 创建切割后的消息
                     truncated_msg = msg.copy()
-                    truncated_content = content[:chars_to_take]
                     
                     # 更新消息内容
                     if 'message' in truncated_msg and 'content' in truncated_msg['message']:
@@ -702,7 +744,9 @@ class ClaudeContextExtractor:
                             truncated_msg['message']['content'] = truncated_content + "\n\n[...内容已截断...]\n"
                     
                     front_messages.append(truncated_msg)
-                    front_token_count = FRONT_TOKENS  # 精确达到目标
+                    # 计算实际添加的tokens（而不是假设值）
+                    actual_truncated_tokens = self.count_tokens(truncated_content)
+                    front_token_count += actual_truncated_tokens
                 break  # 达到目标，停止
         
         # 2. 提取后75k tokens的消息（从后往前，精确切割）
@@ -725,13 +769,15 @@ class ClaudeContextExtractor:
                 # 需要切割这条消息（从后面切）
                 remaining_tokens = BACK_TOKENS - back_token_count
                 if remaining_tokens > 100:  # 如果剩余空间足够（>100 tokens），进行切割
-                    # 计算需要切割的字符数（估算）
-                    char_ratio = len(content) / tokens if tokens > 0 else 4
-                    chars_to_take = int(remaining_tokens * char_ratio)
+                    # 使用二分查找精确切割内容（从后面切）
+                    # 先反转内容，切割，再反转回来
+                    reversed_content = content[::-1]
+                    truncated_reversed = self._binary_search_truncate(reversed_content, remaining_tokens)
+                    truncated_content_only = truncated_reversed[::-1]
                     
                     # 创建切割后的消息（取后面部分）
                     truncated_msg = msg.copy()
-                    truncated_content = "[...前面内容已省略...]\n\n" + content[-chars_to_take:]
+                    truncated_content = "[...前面内容已省略...]\n\n" + truncated_content_only
                     
                     # 更新消息内容
                     if 'message' in truncated_msg and 'content' in truncated_msg['message']:
@@ -744,7 +790,9 @@ class ClaudeContextExtractor:
                             truncated_msg['message']['content'] = truncated_content
                     
                     temp_back.append(truncated_msg)
-                    back_token_count = BACK_TOKENS  # 精确达到目标
+                    # 计算实际添加的tokens（而不是假设值）
+                    actual_truncated_tokens = self.count_tokens(truncated_content)
+                    back_token_count += actual_truncated_tokens
                 break  # 达到目标，停止
         
         # 反转back_messages恢复原始顺序
