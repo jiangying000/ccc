@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """
-测试CCDRC所有执行路径都有--verbose参数
+测试CCC所有执行路径都有--verbose参数
 """
 
 import re
+from pathlib import Path
 
-# 读取源文件
-with open('/home/jy/gitr/jiangying000/ccdrc/ccdrc/extractor.py', 'r') as f:
+# 读取本地CCC extractor 源文件
+extractor_path = Path(__file__).resolve().parent / 'ccc' / 'extractor.py'
+with open(extractor_path, 'r', encoding='utf-8') as f:
     content = f.read()
 
 # 查找所有claude调用
 claude_calls = re.findall(r'(os\.system\([^)]*claude[^)]*\))', content)
 
 print("="*60)
-print("检查CCDRC中所有claude调用是否包含--verbose")
+print("检查CCC中所有claude调用是否包含--verbose")
 print("="*60)
 
 missing_verbose = []

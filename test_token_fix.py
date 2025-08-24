@@ -3,14 +3,8 @@
 测试Token计算修复的准确性
 """
 
-import sys
 import os
-import json
-
-# 添加ccdrc到path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 from pathlib import Path
 
 def test_token_calculation():

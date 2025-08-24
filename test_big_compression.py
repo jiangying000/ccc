@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """测试大会话的压缩效果"""
 
-import json
 from pathlib import Path
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def test_big_session():
     """测试3.7MB大会话的压缩"""
@@ -48,58 +47,58 @@ def test_big_session():
         print("\n执行压缩...")
         print("-"*60)
         
-        # 执行压缩
-        compressed_messages, stats = extractor.extract_key_messages(messages)
-        
-        # 计算压缩后大小
-        compressed_tokens = 0
-        compressed_tool_count = 0
-        
-        for msg in compressed_messages:
-            content = extractor._get_message_content(msg)
-            if content:
-                tokens = extractor.count_tokens(content)
-                compressed_tokens += tokens
-                
-                if '[Tool:' in content or '[Read file:' in content:
-                    compressed_tool_count += 1
-        
-        print(f"压缩后消息数: {len(compressed_messages)}")
-        print(f"压缩后Token数: {compressed_tokens:,}")
-        print(f"压缩后工具调用: {compressed_tool_count}")
-        print(f"压缩比: {compressed_tokens/original_tokens*100:.1f}%")
-        
-        # 分析前后分配
-        front_count = 0
-        back_count = 0
-        middle_gap = False
-        
-        for i, msg in enumerate(compressed_messages):
-            content = extractor._get_message_content(msg)
-            if content:
-                tokens = extractor.count_tokens(content)
-                
-                # 检查是否有截断标记
-                if '[...内容已截断...]' in content:
-                    print(f"消息 {i}: 前部截断, {tokens} tokens")
-                    front_count += tokens
-                elif '[...前面内容已省略...]' in content:
-                    print(f"消息 {i}: 后部截断, {tokens} tokens")
-                    back_count += tokens
-                    middle_gap = True
-                elif not middle_gap:
-                    front_count += tokens
-                else:
-                    back_count += tokens
-        
-        print(f"\n前部tokens: {front_count:,}")
-        print(f"后部tokens: {back_count:,}")
-        print(f"总计: {front_count + back_count:,}")
-        
-        # 与预期对比
-        print(f"\n预期: 前25k + 后75k = 100k")
-        print(f"实际: 前{front_count/1000:.1f}k + 后{back_count/1000:.1f}k = {(front_count+back_count)/1000:.1f}k")
-        print(f"差异: {(front_count+back_count)/1000 - 100:.1f}k")
+    # 执行压缩
+    compressed_messages, stats = extractor.extract_key_messages(list(messages))
+
+    # 计算压缩后大小
+    compressed_tokens = 0
+    compressed_tool_count = 0
+    
+    for msg in compressed_messages:
+        content = extractor._get_message_content(msg)
+        if content:
+            tokens = extractor.count_tokens(content)
+            compressed_tokens += tokens
+            
+            if '[Tool:' in content or '[Read file:' in content:
+                compressed_tool_count += 1
+    
+    print(f"压缩后消息数: {len(compressed_messages)}")
+    print(f"压缩后Token数: {compressed_tokens:,}")
+    print(f"压缩后工具调用: {compressed_tool_count}")
+    print(f"压缩比: {compressed_tokens/original_tokens*100:.1f}%")
+    
+    # 分析前后分配
+    front_count = 0
+    back_count = 0
+    middle_gap = False
+    
+    for i, msg in enumerate(compressed_messages):
+        content = extractor._get_message_content(msg)
+        if content:
+            tokens = extractor.count_tokens(content)
+            
+            # 检查是否有截断标记
+            if '[...内容已截断...]' in content:
+                print(f"消息 {i}: 前部截断, {tokens} tokens")
+                front_count += tokens
+            elif '[...前面内容已省略...]' in content:
+                print(f"消息 {i}: 后部截断, {tokens} tokens")
+                back_count += tokens
+                middle_gap = True
+            elif not middle_gap:
+                front_count += tokens
+            else:
+                back_count += tokens
+    
+    print(f"\n前部tokens: {front_count:,}")
+    print(f"后部tokens: {back_count:,}")
+    print(f"总计: {front_count + back_count:,}")
+    
+    # 与预期对比
+    print("\n预期: 前25k + 后75k = 100k")
+    print(f"实际: 前{front_count/1000:.1f}k + 后{back_count/1000:.1f}k = {(front_count+back_count)/1000:.1f}k")
+    print(f"差异: {(front_count+back_count)/1000 - 100:.1f}k")
 
 if __name__ == '__main__':
     test_big_session()

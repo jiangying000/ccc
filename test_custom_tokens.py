@@ -3,7 +3,7 @@
 测试自定义token分配功能
 """
 
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 # 创建测试消息
 test_messages = []

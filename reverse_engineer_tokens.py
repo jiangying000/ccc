@@ -5,11 +5,7 @@
 """
 
 import json
-from pathlib import Path
-import sys
-
-sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def analyze_jsonl_structure(jsonl_path):
     """分析JSONL文件的真实结构和token占用"""
@@ -20,7 +16,7 @@ def analyze_jsonl_structure(jsonl_path):
             if line.strip():
                 try:
                     messages.append(json.loads(line))
-                except:
+                except Exception:
                     pass
     
     print("="*60)
@@ -74,7 +70,7 @@ def analyze_jsonl_structure(jsonl_path):
     print(f"   消息数: {len(messages)}")
     print(f"   文件大小: {jsonl_path.stat().st_size / 1024:.1f} KB")
     
-    print(f"\n📊 字符统计:")
+    print("\n📊 字符统计:")
     print(f"   总JSON字符: {total_chars:,}")
     print(f"   纯文本内容: {text_content_chars:,} ({text_content_chars*100//total_chars}%)")
     print(f"   元数据: {metadata_chars:,} ({metadata_chars*100//total_chars}%)")
@@ -90,7 +86,7 @@ def analyze_jsonl_structure(jsonl_path):
     structure_tokens = structure_chars / 2.5
     total_tokens_estimate = text_tokens + structure_tokens
     
-    print(f"\n🎯 Token估算:")
+    print("\n🎯 Token估算:")
     print(f"   文本tokens: {int(text_tokens):,}")
     print(f"   结构tokens: {int(structure_tokens):,}")
     print(f"   总计: {int(total_tokens_estimate):,}")
@@ -101,7 +97,7 @@ def analyze_jsonl_structure(jsonl_path):
     file_size_kb = jsonl_path.stat().st_size / 1024
     empirical_tokens = int(file_size_kb * 77)
     
-    print(f"\n📐 经验公式:")
+    print("\n📐 经验公式:")
     print(f"   基于文件大小(1KB≈77tokens): {empirical_tokens:,}")
     
     return {
@@ -113,8 +109,8 @@ def analyze_jsonl_structure(jsonl_path):
         'empirical_tokens': empirical_tokens
     }
 
-def compare_with_ccdrc():
-    """对比CCDRC的计算和实际"""
+def compare_with_ccc():
+    """对比CCC的计算和实际"""
     
     extractor = ClaudeContextExtractor()
     sessions = extractor.find_claude_sessions()
@@ -126,9 +122,9 @@ def compare_with_ccdrc():
     # 分析第3个会话（您提到的）
     session_path = sessions[2]
     
-    # CCDRC的计算
+    # CCC的计算
     info = extractor.get_session_info(session_path)
-    ccdrc_tokens = info['tokens']
+    ccc_tokens = info['tokens']
     
     # 我们的分析
     analysis = analyze_jsonl_structure(session_path)
@@ -137,18 +133,18 @@ def compare_with_ccdrc():
     print("对比分析")
     print("="*60)
     
-    print(f"\nCCDRC显示: {ccdrc_tokens:,} tokens")
+    print(f"\nCCC显示: {ccc_tokens:,} tokens")
     print(f"结构分析估算: {analysis['estimated_tokens']:,} tokens")
     print(f"经验公式: {analysis['empirical_tokens']:,} tokens")
-    print(f"您提到的实际: 139,000 tokens")
+    print("您提到的实际: 139,000 tokens")
     
-    print(f"\n误差分析:")
-    print(f"CCDRC误差: {abs(139000 - ccdrc_tokens):,} ({abs(139000 - ccdrc_tokens)*100//139000}%)")
+    print("\n误差分析:")
+    print(f"CCC误差: {abs(139000 - ccc_tokens):,} ({abs(139000 - ccc_tokens)*100//139000}%)")
     print(f"结构分析误差: {abs(139000 - analysis['estimated_tokens']):,} ({abs(139000 - analysis['estimated_tokens'])*100//139000}%)")
     print(f"经验公式误差: {abs(139000 - analysis['empirical_tokens']):,} ({abs(139000 - analysis['empirical_tokens'])*100//139000}%)")
     
     print("\n💡 结论:")
-    print("CCDRC只计算了message.content.text部分，")
+    print("CCC只计算了message.content.text部分，")
     print("忽略了JSONL的所有元数据和结构开销。")
     print("实际上Claude需要处理完整的JSONL，包括：")
     print("- parentUuid, sessionId, timestamp等元数据")
@@ -156,4 +152,4 @@ def compare_with_ccdrc():
     print("- type字段和其他控制信息")
 
 if __name__ == "__main__":
-    compare_with_ccdrc()
+    compare_with_ccc()

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-最终测试：验证CCDRC的verbose是否真正生效
+最终测试：验证CCC的verbose是否真正生效
 """
 
 import subprocess
 import sys
 
 print("=" * 60)
-print("测试CCDRC的verbose传递")
+print("测试CCC的verbose传递")
 print("=" * 60)
 
 # 测试方式1：不传env（v3.12.0的方式）

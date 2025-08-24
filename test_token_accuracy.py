@@ -3,7 +3,7 @@
 测试Token计算准确性修复
 """
 
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 print("="*60)
 print("Token计算准确性测试")

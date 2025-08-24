@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""测试CCDRC的压缩功能"""
+"""测试CCC的压缩功能"""
 
-import json
 from pathlib import Path
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def test_compression():
     """测试会话压缩的实际效果"""
@@ -38,7 +37,7 @@ def test_compression():
         
         if original_tokens > 100000:
             # 执行压缩
-            compressed_messages, stats = extractor.extract_key_messages(messages)
+            compressed_messages, stats = extractor.extract_key_messages(list(messages))
             
             # 计算压缩后大小
             compressed_tokens = 0

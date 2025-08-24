@@ -1,10 +1,10 @@
 #!/bin/bash
-# CCDRC 演示脚本
+# CCC 演示脚本
 
-echo "🎬 CCDRC 确认功能演示"
+echo "🎬 CCC 确认功能演示"
 echo "════════════════════════════════════════"
 echo ""
-echo "运行命令: ccdrc"
+echo "运行命令: ccc"
 echo ""
 echo "将会显示："
 echo ""

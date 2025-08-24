@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 """
-测试CCDRC处理空输入的能力
+测试CCC处理空输入的能力
 """
 
-import sys
-sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-
-from ccdrc.interactive_ui import InteractiveSessionSelector
 
 # 模拟get_single_char方法
 def test_get_single_char():

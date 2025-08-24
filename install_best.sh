@@ -1,10 +1,10 @@
 #!/bin/bash
-# CCDRC最佳实践安装脚本
+# CCC最佳实践安装脚本
 # 自动选择最合适的安装方法
 
 set -e
 
-echo "🚀 CCDRC智能安装脚本"
+echo "🚀 CCC智能安装脚本"
 echo "================================"
 echo ""
 
@@ -101,16 +101,17 @@ install_with_pipx() {
         export PATH="$HOME/.local/bin:$PATH"
     fi
     
-    # 安装CCDRC
-    pipx install -e /home/jy/gitr/jiangying000/ccdrc
+    # 安装CCC（当前仓库）
+    pipx install -e "$(pwd)"
     echo "✅ 安装完成！"
-    echo "运行: ccdrc"
+    echo "运行: ccc"
 }
 
 install_with_venv() {
     echo "📦 使用虚拟环境安装..."
     
-    cd /home/jy/gitr/jiangying000/ccdrc
+    # 进入当前仓库
+    cd "$(pwd)"
     
     # 创建虚拟环境
     python3 -m venv .venv
@@ -124,12 +125,12 @@ install_with_venv() {
     
     # 创建命令链接
     mkdir -p ~/.local/bin
-    ln -sf $(pwd)/.venv/bin/ccdrc ~/.local/bin/ccdrc
+    ln -sf "$(pwd)/.venv/bin/ccc" ~/.local/bin/ccc
     
     deactivate
     
     echo "✅ 安装完成！"
-    echo "运行: ccdrc"
+    echo "运行: ccc"
     echo "提示: 添加 ~/.local/bin 到PATH"
 }
 
@@ -143,22 +144,20 @@ install_with_uv() {
         source ~/.bashrc
     fi
     
-    # 安装CCDRC
-    cd /home/jy/gitr/jiangying000/ccdrc
+    # 安装CCC（当前仓库）
     uv tool install .
     
     echo "✅ 安装完成！"
-    echo "运行: ccdrc"
+    echo "运行: ccc"
 }
 
 install_with_pip_force() {
     echo "⚠️  使用pip强制安装（不推荐）..."
     
-    cd /home/jy/gitr/jiangying000/ccdrc
     pip install -e . --break-system-packages
     
     echo "✅ 安装完成！"
-    echo "运行: ccdrc"
+    echo "运行: ccc"
     echo "⚠️  警告：这可能影响系统稳定性"
 }
 
@@ -202,6 +201,6 @@ echo ""
 echo "🎉 安装脚本执行完成！"
 echo ""
 echo "下一步："
-echo "1. 如果命令找不到，执行: source ~/.bashrc"
-echo "2. 测试: ccdrc"
-echo "3. 查看文档: cat /home/jy/gitr/jiangying000/ccdrc/INSTALLATION_BEST_PRACTICES.md"
+echo "1. 如果命令找不到，执行: source ~/.bashrc 或 source ~/.zshrc"
+echo "2. 测试: ccc --stats"
+echo "3. 查看文档: cat INSTALLATION_BEST_PRACTICES.md"

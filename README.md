@@ -1,4 +1,4 @@
-# CCDRC - Claude Context Resume Tool
+# CCC - Claude Context Resume Tool
 
 智能提取和恢复Claude Code对话上下文的工具，优化token使用，支持超长对话的高效续接。
 
@@ -25,11 +25,11 @@ python3 -m pip install --user pipx
 python3 -m pipx ensurepath
 
 # 从GitHub安装
-pipx install git+https://github.com/jiangying000/ccdrc.git
+pipx install git+https://github.com/jiangying000/ccc.git
 
 # 或从本地安装
-git clone https://github.com/jiangying000/ccdrc.git
-pipx install ./ccdrc
+git clone https://github.com/jiangying000/ccc.git
+pipx install ./ccc
 ```
 
 ### 方法2: uvx（最快）
@@ -38,21 +38,21 @@ pipx install ./ccdrc
 
 ```bash
 # 直接运行
-uvx --from git+https://github.com/jiangying000/ccdrc.git ccdrc
+uvx --from git+https://github.com/jiangying000/ccc.git ccc
 
 # 或创建别名
-alias ccdrc='uvx --from git+https://github.com/jiangying000/ccdrc.git ccdrc'
+alias ccc='uvx --from git+https://github.com/jiangying000/ccc.git ccc'
 ```
 
 ### 方法3: uv工具安装
 
 ```bash
 # 使用uv工具安装
-uv tool install git+https://github.com/jiangying000/ccdrc.git
+uv tool install git+https://github.com/jiangying000/ccc.git
 
 # 或从本地
-git clone https://github.com/jiangying000/ccdrc.git
-uv tool install ./ccdrc
+git clone https://github.com/jiangying000/ccc.git
+uv tool install ./ccc
 ```
 
 ### 方法4: pip安装
@@ -61,17 +61,17 @@ uv tool install ./ccdrc
 # 在虚拟环境中安装（推荐）
 python3 -m venv venv
 source venv/bin/activate
-pip install git+https://github.com/jiangying000/ccdrc.git
+pip install git+https://github.com/jiangying000/ccc.git
 
 # 或使用--user（不推荐）
-pip install --user git+https://github.com/jiangying000/ccdrc.git
+pip install --user git+https://github.com/jiangying000/ccc.git
 ```
 
 ### 方法5: 本地脚本安装
 
 ```bash
-git clone https://github.com/jiangying000/ccdrc.git
-cd ccdrc
+git clone https://github.com/jiangying000/ccc.git
+cd ccc
 bash install.sh
 ```
 
@@ -86,18 +86,19 @@ bash install.sh
 
 ```bash
 # 默认：进入交互式选择界面
-ccdrc
+ccc
 
 # 直接选择特定会话（带确认预览）
-ccdrc 0   # 最新会话
-ccdrc 1   # 第2新会话
-ccdrc 2   # 第3新会话
+ccc 0   # 最新会话
+ccc 1   # 第2新会话
+ccc 2   # 第3新会话
 ```
 
 ### 交互式选择界面
 
-无参数运行`ccdrc`时，显示：
-```
+无参数运行`ccc`时，显示：
+
+```text
 ================================================================================
 📋 Claude会话选择器
 ================================================================================
@@ -121,6 +122,7 @@ ccdrc 2   # 第3新会话
 ### 确认预览
 
 选择会话后，发送前显示：
+
 - 📊 会话统计（消息数、token数、压缩率）
 - 📝 开头3条消息预览
 - 📝 结尾3条消息预览
@@ -130,16 +132,10 @@ ccdrc 2   # 第3新会话
 
 ```bash
 # 交互式选择会话
-ccdrc-interactive
+ccc
 
 # 只提取不发送（用于查看）
-ccdrc-extract --index 0
-
-# 自定义token限制
-ccdrc-extract --tokens 50000
-
-# 显示详细统计
-ccdrc-extract --stats
+ccc --stats
 ```
 
 ## 🔧 工作原理
@@ -157,8 +153,8 @@ ccdrc-extract --stats
 
 ## 🏗️ 项目结构
 
-```
-ccdrc/
+```text
+ccc/
 ├── claude-smart-extract.py  # 主程序
 ├── install.sh              # 安装脚本
 ├── pyproject.toml          # Python项目配置
@@ -204,7 +200,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 ## 📮 联系
 
 - GitHub: [@jiangying000](https://github.com/jiangying000)
-- Issues: [GitHub Issues](https://github.com/jiangying000/ccdrc/issues)
+- Issues: [GitHub Issues](https://github.com/jiangying000/ccc/issues)
 
 ---
 

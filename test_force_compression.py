@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """强制测试压缩逻辑，模拟180k场景"""
 
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def test_compression_logic():
     """直接测试extract_key_messages的逻辑"""
@@ -70,14 +70,14 @@ def test_compression_logic():
     print(f"后部: {back_tokens:,} tokens ({back_tokens/1000:.1f}k)")
     print(f"总计: {compressed_tokens:,} tokens ({compressed_tokens/1000:.1f}k)")
     
-    print(f"\n预期: 100k")
+    print("\n预期: 100k")
     print(f"实际: {compressed_tokens/1000:.1f}k")
     print(f"差异: {compressed_tokens/1000 - 100:.1f}k ({(compressed_tokens/100000 - 1)*100:+.1f}%)")
     
     # 分析为什么会有差异
     print("\n分析差异原因：")
-    print(f"1. Token计算方式: 使用tiktoken的o200k_base")
-    print(f"2. 内容提取: _get_message_content提取了text内容")
+    print("1. Token计算方式: 使用tiktoken的o200k_base")
+    print("2. 内容提取: _get_message_content提取了text内容")
     print(f"3. 压缩策略: 前{front_tokens/1000:.1f}k + 后{back_tokens/1000:.1f}k")
     
     # 验证是否精确到25k+75k

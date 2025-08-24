@@ -9,7 +9,7 @@ def create_smart_tokenizer_fix():
     """创建智能的tokenizer计算方法"""
     
     fix_code = '''
-# 修改 ccdrc/extractor.py 的 get_session_info 方法
+# 修改 ccc/extractor.py 的 get_session_info 方法
 
 def get_session_info(self, session_path: Path) -> Dict:
     """获取会话的详细信息 - 智能tokenizer版"""

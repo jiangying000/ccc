@@ -1,7 +1,7 @@
 # Token计算偏差修复说明
 
 ## 问题描述
-之前CCDRC显示提取了139k tokens，但Claude API报错显示实际输入190k tokens，存在37%的偏差。
+之前CCC显示提取了139k tokens，但Claude API报错显示实际输入190k tokens，存在37%的偏差。
 
 ## 问题原因
 1. **只计算内容本身**：之前只计算了消息内容的tokens
@@ -43,19 +43,20 @@ OVERHEAD_FACTOR = 0.6  # 实际可用tokens约为目标的60%
 
 ## 测试方法
 
+
 ```bash
-# 运行测试脚本
-python3 /home/jy/gitr/jiangying000/ccdrc/test_token_accuracy.py
+# 运行测试脚本（在项目根目录）
+python3 test_token_accuracy.py
 ```
 
 ## 实际使用
 
 ```bash
-ccdrc
+ccc
 ```
 
 选择压缩时，注意新的显示：
-```
+```text
 📊 压缩统计:
   策略: 前25k + 后75k tokens
   原始: 523条消息, 186,432 tokens
@@ -67,6 +68,7 @@ ccdrc
 ## 技术细节
 
 ### 格式化开销包括
+
 1. **角色标记**：每条消息的`**👤 用户**:` 或 `**🤖 Claude**:`
 2. **分隔符**：消息之间的`\n\n`
 3. **Markdown**：头部和尾部的说明文字
@@ -74,15 +76,18 @@ ccdrc
 5. **JSON结构**：消息的元数据
 
 ### 计算公式
-```
+
+```text
 实际tokens ≈ 内容tokens / 0.6
 ```
 
 这个系数基于实际测试：
+
 - 139k内容 → 190k实际 = 1.37倍
 - 保守估计使用1.67倍（1/0.6）
 
 ## 更新记录
+
 - **v3.9.1**: 修复token计算偏差
   - 引入OVERHEAD_FACTOR = 0.6
   - 显示预估实际tokens

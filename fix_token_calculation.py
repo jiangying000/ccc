@@ -80,7 +80,7 @@ def calculate_realistic_tokens(session_path):
     return final_estimate
 
 def patch_extractor():
-    """修补CCDRC的token计算方法"""
+    """修补CCC的token计算方法"""
     
     patch_code = '''
 # 修正的token计算方法
@@ -106,8 +106,8 @@ def get_session_info(self, session_path: Path) -> Dict:
 
 if __name__ == "__main__":
     import sys
-    sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-    from ccdrc.extractor import ClaudeContextExtractor
+    # Removed legacy sys.path hack for ccdrc
+    from ccc.extractor import ClaudeContextExtractor
     
     # 测试最近的会话
     extractor = ClaudeContextExtractor()
@@ -115,21 +115,21 @@ if __name__ == "__main__":
     
     if sessions and len(sessions) >= 3:
         session_path = sessions[2]
-        
+
         # 计算准确的tokens
         realistic = calculate_realistic_tokens(session_path)
-        
-        # 对比CCDRC当前的计算
+
+        # 对比CCC当前的计算
         info = extractor.get_session_info(session_path)
-        ccdrc_tokens = info['tokens']
-        
+        ccc_tokens = info['tokens']
+
         print("\n" + "="*60)
         print("对比结果")
         print("="*60)
-        print(f"CCDRC当前显示: {ccdrc_tokens:,} tokens")
+        print(f"CCC当前显示: {ccc_tokens:,} tokens")
         print(f"修正后估算: {realistic:,} tokens")
         print(f"您提到的实际: 139,000 tokens")
-        print(f"准确度提升: {abs(139000 - realistic) < abs(139000 - ccdrc_tokens)}")
-        
+        print(f"准确度提升: {abs(139000 - realistic) < abs(139000 - ccc_tokens)}")
+
         # 显示修复建议
         patch_extractor()

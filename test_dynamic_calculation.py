@@ -3,7 +3,7 @@
 测试动态Token计算（不用固定系数）
 """
 
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 print("="*60)
 print("动态Token计算测试")

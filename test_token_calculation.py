@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 """
 测试token计算准确性
-对比CCDRC计算 vs Claude实际使用
+对比CCC计算 vs Claude实际使用
 """
 
 import json
-import sys
-from pathlib import Path
-
-sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def analyze_session_tokens(session_path):
     """分析会话的token计算"""
     
     extractor = ClaudeContextExtractor(verbose=True)
     
-    # 1. CCDRC的计算方式
+    # 1. CCC的计算方式
     info = extractor.get_session_info(session_path)
-    ccdrc_tokens = info['tokens']
+    ccc_tokens = info['tokens']
     
     # 2. 分析实际内容
     messages = extractor.parse_session(session_path)
@@ -56,27 +52,27 @@ def analyze_session_tokens(session_path):
     print(f"   文件大小: {total_file_size/1024:.1f} KB")
     print(f"   消息数量: {message_count}")
     
-    print(f"\n🔢 CCDRC当前计算:")
-    print(f"   显示tokens: {ccdrc_tokens:,}")
+    print("\n🔢 CCC当前计算:")
+    print(f"   显示tokens: {ccc_tokens:,}")
     print(f"   = 文本内容: {text_only_tokens:,}")
-    print(f"   + 系统开销: 20,000 (硬编码)")
+    print("   + 系统开销: 20,000 (硬编码)")
     
-    print(f"\n📊 实际内容分析:")
+    print("\n📊 实际内容分析:")
     print(f"   纯文本tokens: {text_only_tokens:,}")
     print(f"   JSON字符数: {json_structure_chars:,}")
     print(f"   JSON tokens (估算): {json_tokens_estimate:,}")
     
-    print(f"\n🎯 更准确的估算:")
+    print("\n🎯 更准确的估算:")
     print(f"   总tokens: {accurate_estimate:,}")
     
-    print(f"\n⚠️  偏差分析:")
-    print(f"   CCDRC显示: {ccdrc_tokens:,}")
+    print("\n⚠️  偏差分析:")
+    print(f"   CCC显示: {ccc_tokens:,}")
     print(f"   实际可能: {accurate_estimate:,}")
-    print(f"   差异: {accurate_estimate - ccdrc_tokens:,} tokens")
-    print(f"   偏差率: {(accurate_estimate - ccdrc_tokens) / accurate_estimate * 100:.1f}%")
+    print(f"   差异: {accurate_estimate - ccc_tokens:,} tokens")
+    print(f"   偏差率: {(accurate_estimate - ccc_tokens) / accurate_estimate * 100:.1f}%")
     
     return {
-        'ccdrc': ccdrc_tokens,
+    'ccc': ccc_tokens,
         'text_only': text_only_tokens,
         'json_estimate': json_tokens_estimate,
         'accurate': accurate_estimate
@@ -95,7 +91,7 @@ if __name__ == "__main__":
         print("\n" + "="*60)
         print("💡 结论：")
         print("="*60)
-        print("CCDRC目前只计算纯文本内容的tokens，")
+        print("CCC目前只计算纯文本内容的tokens，")
         print("忽略了JSON结构的巨大开销。")
         print("实际上Claude需要解析完整的JSONL文件，")
         print("包括所有的type、role、timestamp等字段。")

@@ -1,5 +1,5 @@
 [project]
-name = "ccdrc"
+name = "ccc"
 version = "3.9.0"
 description = "Claude Context Resume Tool - Smart context extraction for Claude Code sessions"
 authors = [
@@ -29,14 +29,12 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jiangying000/ccdrc"
-Repository = "https://github.com/jiangying000/ccdrc"
-Issues = "https://github.com/jiangying000/ccdrc/issues"
+Homepage = "https://github.com/jiangying000/ccc"
+Repository = "https://github.com/jiangying000/ccc"
+Issues = "https://github.com/jiangying000/ccc/issues"
 
 [project.scripts]
-ccdrc = "ccdrc.cli:ccdrc"
-ccdrc-extract = "ccdrc.cli:ccdrc_extract"
-ccdrc-interactive = "ccdrc.cli:ccdrc_interactive"
+ccc = "ccc.cli:ccc"
 
 [build-system]
 requires = ["hatchling"]
@@ -50,4 +48,4 @@ dev-dependencies = []
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["ccdrc"]
+packages = ["ccc"]

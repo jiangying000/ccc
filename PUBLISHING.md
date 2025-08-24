@@ -27,7 +27,7 @@ pip install --user twine
 python3 -m twine upload --repository testpypi dist/*
 
 # 测试安装
-pip install --index-url https://test.pypi.org/simple/ ccdrc
+pip install --index-url https://test.pypi.org/simple/ ccc
 ```
 
 ## 发布到PyPI
@@ -65,22 +65,22 @@ password = <your-testpypi-token>
 
 ```bash
 # pipx（推荐）
-pipx install ccdrc
+pipx install ccc
 
 # pip
-pip install ccdrc
+pip install ccc
 
 # uvx
-uvx ccdrc
+uvx ccc
 
 # uv tool
-uv tool install ccdrc
+uv tool install ccc
 ```
 
 ## 版本更新
 
 1. 更新 `pyproject.toml` 中的版本号
-2. 更新 `ccdrc/__init__.py` 中的 `__version__`
+2. 更新 `ccc/__init__.py` 中的 `__version__`
 3. 创建Git标签：
    ```bash
    git tag v1.0.0

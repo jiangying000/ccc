@@ -4,11 +4,7 @@
 确保只清理工具调用JSON，保留正常JSON
 """
 
-import sys
-import json
-sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def test_pollution_cleanup():
     """测试污染清理功能"""

@@ -4,9 +4,7 @@
 """
 
 import json
-import sys
-sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def debug_session(session_path):
     """详细调试一个会话的token计算"""
@@ -20,7 +18,7 @@ def debug_session(session_path):
             if line.strip():
                 try:
                     messages.append(json.loads(line))
-                except:
+                except Exception:
                     pass
     
     # 统计不同类型的消息
@@ -48,7 +46,7 @@ def debug_session(session_path):
     print(f"文件大小: {session_path.stat().st_size / 1024:.1f} KB")
     print(f"消息数: {len(messages)}")
     print(f"消息类型分布: {msg_types}")
-    print(f"\n字符统计:")
+    print("\n字符统计:")
     print(f"  总JSON字符: {total_json_chars:,}")
     print(f"  文本内容字符: {text_content_chars:,}")
     print(f"  结构字符: {total_json_chars - text_content_chars:,}")
@@ -60,7 +58,7 @@ def debug_session(session_path):
     raw_total = text_tokens + structure_tokens
     adjusted_total = raw_total * 1.09
     
-    print(f"\nToken计算:")
+    print("\nToken计算:")
     print(f"  文本tokens: {int(text_tokens):,}")
     print(f"  结构tokens: {int(structure_tokens):,}")
     print(f"  调整前: {int(raw_total):,}")
@@ -92,12 +90,12 @@ print("="*60)
 for i in range(min(3, len(sessions))):
     calculated = debug_session(sessions[i])
     
-    # 用CCDRC获取
+    # 用CCC获取
     info = extractor.get_session_info(sessions[i])
-    print(f"\nCCDRC新算法计算: {info['tokens']:,}")
+    print(f"\nCCC算法计算: {info['tokens']:,}")
     print(f"我的调试计算: {int(calculated):,}")
     
     if i == 2:
-        print(f"实际值: 139,000")
+        print("实际值: 139,000")
     
     print("="*60)

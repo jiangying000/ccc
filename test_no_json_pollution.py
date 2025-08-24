@@ -6,9 +6,8 @@
 import json
 import sys
 import os
-sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
 
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def test_tool_call_extraction():
     """测试工具调用的提取是否避免了JSON"""

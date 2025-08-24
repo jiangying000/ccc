@@ -11,7 +11,7 @@ def create_accurate_token_fix():
     """生成准确的token计算修复代码"""
     
     fix_code = '''
-# 在 ccdrc/extractor.py 中修改 get_session_info 方法
+# 在 ccc/extractor.py 中修改 get_session_info 方法
 
 def get_session_info(self, session_path: Path) -> Dict:
     """获取会话的详细信息 - 准确版"""

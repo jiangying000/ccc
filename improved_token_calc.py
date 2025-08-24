@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-改进的Token计算方法：优先使用cache_read_input_tokens
-基于深入研究发现：Claude Code显示的很可能是cache_read_input_tokens
+Improved token calculation: prefer cache_read_input_tokens
+Based on research: Claude Code likely shows cache_read_input_tokens.
 """
 
 import json
 from pathlib import Path
+from ccc.extractor import ClaudeContextExtractor
 
 def get_accurate_token_count(session_path):
     """
@@ -24,18 +25,15 @@ def get_accurate_token_count(session_path):
         with open(session_path, 'r') as f:
             for line in f:
                 msg = json.loads(line)
-                
-                # 查找assistant消息中的usage
+                # Find usage in assistant messages
                 if msg.get('type') == 'assistant' and 'message' in msg:
-                    if 'usage' in msg['message']:
+                    usage = msg['message'].get('usage')
+                    if usage:
                         has_usage_count += 1
-                        usage = msg['message']['usage']
-                        
-                        # 获取cache_read值
                         cache_read = usage.get('cache_read_input_tokens', 0)
                         if cache_read > 0:
                             cache_read_latest = cache_read
-    except:
+    except Exception:
         pass
     
     # 如果找到cache_read，使用它
@@ -48,11 +46,7 @@ def get_accurate_token_count(session_path):
             'note': f'基于cache_read_input_tokens（{has_usage_count}个usage记录）'
         }
     
-    # 否则回退到内容计算（使用现有的CCDRC方法）
-    import sys
-    sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-    from ccdrc.extractor import ClaudeContextExtractor
-    
+    # Fallback: use CCC content-based calculation
     extractor = ClaudeContextExtractor()
     info = extractor.get_session_info(Path(session_path))
     
@@ -85,7 +79,7 @@ def test_accuracy():
     print("总结：")
     print("1. cache_read_input_tokens是Claude Code最可能显示的值")
     print("2. 它代表'当前上下文窗口大小'，不是累计使用")
-    print("3. CCDRC应该优先读取这个值以匹配Claude Code")
+    print("3. CCC应优先读取这个值以匹配Claude Code")
 
 
 if __name__ == '__main__':

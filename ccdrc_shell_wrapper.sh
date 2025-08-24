@@ -1,7 +1,7 @@
 #!/bin/bash
-# CCDRC Shell包装器 - 绕过Python环境问题
+# CCC Shell包装器 - 绕过Python环境问题（已弃用）
 
-echo "CCDRC Shell Wrapper - 保证token显示"
+echo "CCC Shell Wrapper - 保证token显示（建议直接使用 ccc 命令）"
 echo "===================================="
 
 # 获取会话ID（这里用示例，实际需要从Python获取）
@@ -19,7 +19,7 @@ elif [ "$choice" = "2" ]; then
     echo "正在压缩并发送..."
     # 这里调用Python做压缩，然后pipe给claude
     python3 -c "
-from ccdrc.extractor import ClaudeContextExtractor
+# from ccc.extractor import ClaudeContextExtractor  # rebranded
 # ... 压缩逻辑
     " | claude --verbose --dangerously-skip-permissions
 fi

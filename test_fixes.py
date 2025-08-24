@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """测试v3.8.1的修复"""
 
-import sys
-from pathlib import Path
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 # 测试修复
 extractor = ClaudeContextExtractor()
@@ -17,14 +15,14 @@ print("=" * 60)
 for session in sessions[:10]:
     info = extractor.get_session_info(session)
     if 180000 < info['tokens'] < 200000:
-        print(f"\n找到测试会话:")
+        print("\n找到测试会话:")
         print(f"  文件: {session.name}")
         print(f"  消息数: {info['message_count']}")
         print(f"  Tokens: {info['tokens']:,}")
         
         # 验证是否包含系统开销
         if info['tokens'] > 180000:
-            print(f"  ✅ 包含系统开销（约23k）")
+            print("  ✅ 包含系统开销（约23k）")
         
         # 测试是否会触发压缩
         if info['tokens'] >= 150000:
@@ -41,5 +39,5 @@ print("  [3] 第三个会话（用户输入3）")
 print("  ✅ 索引从1开始，更符合日常习惯")
 
 print("\n流程简化:")
-print("  ✅ ccdrc命令直接进入交互界面")
+print("  ✅ ccc命令直接进入交互界面")
 print("  ✅ 无需--interactive参数")

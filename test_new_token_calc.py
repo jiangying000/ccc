@@ -3,9 +3,7 @@
 测试新的token计算准确性
 """
 
-import sys
-sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def test_new_calculation():
     """测试新的token计算"""
@@ -33,7 +31,7 @@ def test_new_calculation():
         
         # 如果是第3个会话（用户提到的）
         if i == 2:
-            print(f"    您提到的实际: 139,000")
+            print("    您提到的实际: 139,000")
             error = abs(139000 - info['tokens'])
             error_pct = error * 100 / 139000
             print(f"    误差: {error:,} ({error_pct:.1f}%)")

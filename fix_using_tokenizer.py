@@ -5,9 +5,7 @@
 """
 
 import json
-import sys
-sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def test_tokenizer_calculation():
     """测试用tokenizer计算"""
@@ -51,7 +49,7 @@ def correct_token_calculation():
     """正确的token计算实现"""
     
     code = '''
-# 修改 ccdrc/extractor.py 的 get_session_info 方法
+# 修改 ccc/extractor.py 的 get_session_info 方法
 
 def get_session_info(self, session_path: Path) -> Dict:
     """获取会话的详细信息 - 使用tokenizer版"""

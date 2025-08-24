@@ -4,9 +4,7 @@
 """
 
 import json
-import sys
-sys.path.insert(0, '/home/jy/gitr/jiangying000/ccdrc')
-from ccdrc.extractor import ClaudeContextExtractor
+from ccc.extractor import ClaudeContextExtractor
 
 def analyze_tool_call_session():
     """分析工具调用密集会话"""
@@ -50,9 +48,11 @@ def analyze_tool_call_session():
         for msg in msgs:
             try:
                 msg_json = json.dumps(msg, ensure_ascii=False, separators=(',', ':'))
+                if extractor.encoder is None:
+                    continue
                 encoded = extractor.encoder.encode(msg_json)
                 tokens += len(encoded)
-            except:
+            except Exception:
                 pass
         return tokens
     
@@ -61,7 +61,7 @@ def analyze_tool_call_session():
     normal_tokens = calc_tokens(normal_msgs)
     total_tokens = tool_use_tokens + tool_result_tokens + normal_tokens
     
-    print(f"\nToken分布:")
+    print("\nToken分布:")
     print(f"工具调用tokens: {tool_use_tokens:,} ({tool_use_tokens*100//total_tokens if total_tokens else 0}%)")
     print(f"工具结果tokens: {tool_result_tokens:,} ({tool_result_tokens*100//total_tokens if total_tokens else 0}%)")
     print(f"普通消息tokens: {normal_tokens:,} ({normal_tokens*100//total_tokens if total_tokens else 0}%)")
@@ -70,8 +70,10 @@ def analyze_tool_call_session():
     # 查看工具调用的结构
     if tool_use_msgs:
         sample = tool_use_msgs[0]
-        print(f"\n工具调用样例:")
+        print("\n工具调用样例:")
         print(json.dumps(sample, ensure_ascii=False, indent=2)[:500] + "...")
+    else:
+        print("\n工具调用样例: 无")
     
     print("\n" + "="*60)
     print("假设：Claude可能对工具调用有优化")
@@ -92,15 +94,17 @@ def analyze_tool_call_session():
             # 普通消息正常计算
             try:
                 msg_json = json.dumps(msg, ensure_ascii=False, separators=(',', ':'))
+                if extractor.encoder is None:
+                    continue
                 encoded = extractor.encoder.encode(msg_json)
                 optimized_tokens += len(encoded)
-            except:
+            except Exception:
                 pass
     
     print(f"优化后估算: {optimized_tokens:,} tokens")
-    print(f"您提到的实际: 158,000 tokens")
+    print("您提到的实际: 158,000 tokens")
     print(f"原计算: {total_tokens:,} tokens")
-    print(f"\n可能的原因:")
+    print("\n可能的原因:")
     print("1. Claude对工具调用有特殊压缩")
     print("2. 不是所有JSON字段都被处理")
     print("3. 重复的结构被优化")
