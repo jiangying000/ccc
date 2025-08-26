@@ -7,6 +7,30 @@
 
 智能提取和恢复Claude Code对话上下文的工具，优化token使用，支持超长对话的高效续接。
 
+## ⚡ 快速安装（推荐）
+
+使用 pipx（隔离环境，不污染系统）：
+
+```bash
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+pipx install ccc
+
+# 升级到最新版
+pipx upgrade ccc
+```
+
+开发/本地源码安装：
+
+```bash
+git clone https://github.com/jiangying000/ccc.git
+cd ccc
+pipx install .
+
+# 本地改动后快速重装
+pipx uninstall ccc && pipx install .
+```
+
 ## ✨ 特性
 
 - 🚀 **智能交互**: 无参数时自动进入会话选择界面
@@ -133,6 +157,15 @@ ccc 2   # 第3新会话
 
 请选择会话 [0-14]: _
 ```
+
+键位速览（实际界面底部会动态显示）
+
+- [1~N]：选择当前页第 N 个会话
+- [n]：下一页；[Shift+n]/[b]：上一页
+- [g]：第一页；[G]：最后一页
+- [j]：跳转到指定页
+- [s]：设置每页数量（1–20，默认3）
+- [h]：显示/隐藏帮助；[q]：退出
 
 ### 确认预览
 
