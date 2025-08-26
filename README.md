@@ -1,5 +1,10 @@
 # CCC - Claude Context Resume Tool
 
+[![CI](https://github.com/jiangying000/ccc/actions/workflows/ci.yml/badge.svg)](https://github.com/jiangying000/ccc/actions/workflows/ci.yml)
+[![PyPI version](https://badge.fury.io/py/ccc.svg)](https://badge.fury.io/py/ccc)
+[![Python Support](https://img.shields.io/pypi/pyversions/ccc.svg)](https://pypi.org/project/ccc/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 智能提取和恢复Claude Code对话上下文的工具，优化token使用，支持超长对话的高效续接。
 
 ## ✨ 特性
@@ -15,7 +20,17 @@
 
 ## 📦 安装
 
-### 方法1: pipx（推荐）
+### 方法1: PyPI安装（最简单）
+
+```bash
+# 使用pip安装
+pip install ccc
+
+# 或使用pipx安装到隔离环境（推荐）
+pipx install ccc
+```
+
+### 方法2: pipx从源码安装
 
 使用pipx安装到隔离环境（不污染全局Python）：
 
@@ -24,7 +39,7 @@
 python3 -m pip install --user pipx
 python3 -m pipx ensurepath
 
-# 从GitHub安装
+# 从GitHub安装最新版
 pipx install git+https://github.com/jiangying000/ccc.git
 
 # 或从本地安装
