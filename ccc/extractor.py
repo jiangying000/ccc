@@ -752,8 +752,8 @@ def main():
     parser.add_argument("--output", "-o", type=str, default=None, help="输出文件路径（默认输出到终端）")
     parser.add_argument("--send", action="store_true", help="直接发送到Claude CLI")
     parser.add_argument("--stats", action="store_true", help="显示详细统计信息")
-    parser.add_argument("--workers", "-w", type=int, default=None, help="分页并发工作数（默认=min(4, CPU)）")
-    parser.add_argument("--threads", action="store_true", help="使用线程池（默认进程池）")
+    parser.add_argument("--workers", "-w", type=int, default=None, help="分页并发工作数（默认=当前页条目数）")
+    parser.add_argument("--threads", action="store_true", help="使用线程池（默认线程池）")
     args = parser.parse_args()
 
     extractor = ClaudeContextExtractor(max_tokens=args.tokens)
@@ -774,10 +774,9 @@ def main():
     session_infos: List[Dict] = []
     page_size = 3
     realtime_ui = True  # 实时计算每页数据，避免翻页缓存导致信息滞后
-    # 并发配置
-    default_workers = max(1, min(4, os.cpu_count() or 2))
-    workers = default_workers if args.workers is None else max(1, int(args.workers))
-    use_processes = not args.threads
+    # 并发配置（默认自适应：每页条目数；默认使用线程）
+    workers = None if args.workers is None else max(1, int(args.workers))
+    use_processes = False  # 默认线程池；如需进程池，可手动调整为 True 或通过后续CLI设计
     for session in sessions:
         info = {
             "path": session,

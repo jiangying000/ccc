@@ -86,22 +86,18 @@ class InteractiveSessionSelector:
               page_size.
     """
 
-    def __init__(self, sessions: List[Dict], page_size: int = 3, extractor=None, realtime: bool = False, concurrency: Optional[int] = None, use_processes: bool = True):
+    def __init__(self, sessions: List[Dict], page_size: int = 3, extractor=None, realtime: bool = False, concurrency: Optional[int] = None, use_processes: bool = False):
         self.sessions = sessions
         self.page_size = page_size
         self.current_page = 0
         self.total_pages = (len(sessions) + page_size - 1) // page_size
         self.extractor = extractor
         self.realtime = realtime
-        # 并发设置
-        if concurrency is None:
-            cpu = os.cpu_count() or 2
-            # 默认并发取 min(4, cpu)
-            self.concurrency = max(1, min(4, cpu))
-        else:
-            self.concurrency = max(1, int(concurrency))
+        # 并发设置（默认自适应：每页条目数；可传入覆盖）
+        self.concurrency: Optional[int] = None if concurrency is None else max(1, int(concurrency))
         self.use_processes = bool(use_processes)
         self._last_page_elapsed_ms: Optional[int] = None
+        self._last_page_concurrency: Optional[int] = None
         self.show_help = False  # 是否显示帮助面板
 
     def _recompute_pagination(self) -> None:
@@ -127,19 +123,22 @@ class InteractiveSessionSelector:
             # Always compute in realtime
             indices = list(range(start_idx, end_idx))
             base_items = [self.sessions[i] for i in indices]
+            # 自适应并发：默认使用线程，并发数=当前页条目数
+            effective_conc = self.concurrency if self.concurrency is not None else len(base_items)
+            effective_conc = max(1, effective_conc)
             try:
-                if self.use_processes and self.concurrency > 1:
+                if self.use_processes and effective_conc > 1:
                     # 使用进程池并发计算
                     from concurrent.futures import ProcessPoolExecutor
                     from .extractor import process_session_worker
                     args = [(k, item['path']) for k, item in enumerate(base_items)]
                     results: Dict[int, Dict] = {}
-                    with ProcessPoolExecutor(max_workers=self.concurrency) as ex:
+                    with ProcessPoolExecutor(max_workers=effective_conc) as ex:
                         for idx, info in ex.map(process_session_worker, args):
                             info['path'] = base_items[idx]['path']
                             results[idx] = info
                     page_sessions = [results[i] if i in results else base_items[i] for i in range(len(base_items))]
-                elif self.concurrency > 1:
+                elif effective_conc > 1:
                     # 使用线程池并发计算（适合IO）
                     from concurrent.futures import ThreadPoolExecutor, as_completed
                     def _compute(item: Dict) -> Dict:
@@ -150,7 +149,7 @@ class InteractiveSessionSelector:
                         except Exception:
                             return item
                     page_sessions = [None] * len(base_items)  # type: ignore[list-item]
-                    with ThreadPoolExecutor(max_workers=self.concurrency) as ex:
+                    with ThreadPoolExecutor(max_workers=effective_conc) as ex:
                         future_to_idx = {ex.submit(_compute, it): i for i, it in enumerate(base_items)}
                         for fut in as_completed(future_to_idx):
                             i = future_to_idx[fut]
@@ -181,6 +180,11 @@ class InteractiveSessionSelector:
             page_sessions = [self.sessions[i] for i in range(start_idx, end_idx)]
         t1 = time.perf_counter()
         self._last_page_elapsed_ms = int((t1 - t0) * 1000)
+        # 记录实际并发度
+        try:
+            self._last_page_concurrency = effective_conc if (self.extractor and end_idx > start_idx) else 1
+        except Exception:
+            self._last_page_concurrency = None
 
         for i in range(start_idx, end_idx):
             session = page_sessions[i - start_idx]
@@ -213,8 +217,8 @@ class InteractiveSessionSelector:
             if width >= 70:
                 extra_perf = ""
                 if self._last_page_elapsed_ms is not None:
-                    mode = "进程" if (self.use_processes and self.concurrency > 1) else ("线程" if self.concurrency > 1 else "串行")
-                    extra_perf = f"  •  {mode}×{self.concurrency}  •  耗时 {self._last_page_elapsed_ms} ms"
+                    conc = self._last_page_concurrency if self._last_page_concurrency else 1
+                    extra_perf = f"  •  并发 {conc}  •  耗时 {self._last_page_elapsed_ms} ms"
                 return (
                     f"📄 第 {self.current_page + 1}/{self.total_pages} 页  •  "
                     f"共 {len(self.sessions)} 会话  •  每页 {self.page_size} 条" + extra_perf
@@ -222,7 +226,8 @@ class InteractiveSessionSelector:
             elif width >= 50:
                 perf = ""
                 if self._last_page_elapsed_ms is not None:
-                    perf = f"  •  {self._last_page_elapsed_ms}ms"
+                    conc = self._last_page_concurrency if self._last_page_concurrency else 1
+                    perf = f"  •  并发 {conc}  •  {self._last_page_elapsed_ms}ms"
                 return (
                     f"📄 第 {self.current_page + 1}/{self.total_pages} 页  •  "
                     f"共 {len(self.sessions)}  •  每页 {self.page_size}" + perf
