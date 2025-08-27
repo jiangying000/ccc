@@ -324,16 +324,23 @@ class ClaudeContextExtractor:
                     start = datetime.fromisoformat(first_ts.replace("Z", "+00:00"))
                     end = datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
                     delta = end - start
+                    total_seconds = int(delta.total_seconds())
+                    if total_seconds < 0:
+                        total_seconds = 0
                     if delta.days > 0:
                         info["duration"] = f"{delta.days}天"
-                    elif delta.seconds > 3600:
-                        info["duration"] = f"{delta.seconds // 3600}小时"
-                    elif delta.seconds > 60:
-                        info["duration"] = f"{delta.seconds // 60}分钟"
+                    elif total_seconds >= 3600:
+                        info["duration"] = f"{total_seconds // 3600}小时"
+                    elif total_seconds >= 60:
+                        info["duration"] = f"{total_seconds // 60}分钟"
                     else:
-                        info["duration"] = "刚刚"
+                        # 显示具体秒数（<=60秒）
+                        info["duration"] = f"{total_seconds}秒"
                 except Exception:
-                    pass
+                    info["duration"] = "—"
+            else:
+                # 无法判断时显示破折号
+                info["duration"] = "—"
             info["topics"] = self.identify_session_topics(messages, summaries)
             info["meaningful_messages"] = self.extract_meaningful_messages(messages[:30], count=5)
             if len(messages) > 10:
@@ -764,6 +771,10 @@ def main():
     print("⏳ 正在加载会话列表...", file=sys.stderr)
     session_infos: List[Dict] = []
     page_size = 3
+    realtime_ui = True  # 实时计算每页数据，避免翻页缓存导致信息滞后
+    # 并发配置：默认使用进程并发
+    workers = max(1, min(4, os.cpu_count() or 2))
+    use_processes = True
     for session in sessions:
         info = {
             "path": session,
@@ -783,16 +794,24 @@ def main():
         }
         session_infos.append(info)
 
-    print(f"  计算前 {page_size} 个会话...", file=sys.stderr)
-    for i in range(min(page_size, len(session_infos))):
-        try:
-            full_info = extractor.get_session_info(session_infos[i]["path"])
-            full_info["needs_full_load"] = False
-            session_infos[i] = full_info
-        except Exception as e:
-            print(f"  ⚠ 加载会话 {i+1} 失败: {e}", file=sys.stderr)
+    if not realtime_ui:
+        print(f"  计算前 {page_size} 个会话...", file=sys.stderr)
+        for i in range(min(page_size, len(session_infos))):
+            try:
+                full_info = extractor.get_session_info(session_infos[i]["path"])
+                full_info["needs_full_load"] = False
+                session_infos[i] = full_info
+            except Exception as e:
+                print(f"  ⚠ 加载会话 {i+1} 失败: {e}", file=sys.stderr)
 
-    selector = InteractiveSessionSelector(session_infos, page_size=3, extractor=extractor)
+    selector = InteractiveSessionSelector(
+        session_infos,
+        page_size=page_size,
+        extractor=extractor,
+        realtime=realtime_ui,
+        concurrency=workers,
+        use_processes=use_processes,
+    )
     selected_info = selector.run()
     if not selected_info:
         sys.exit(0)

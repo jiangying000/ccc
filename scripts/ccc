@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Lightweight local runner for CCC without packaging
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Ensure repo is on PYTHONPATH so `python3 -m ccc.cli` can import package
+export PYTHONPATH="$REPO_ROOT:${PYTHONPATH:-}"
+
+exec python3 -m ccc.cli "$@"
+

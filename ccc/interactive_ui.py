@@ -11,7 +11,9 @@ Improved for clarity and ease-of-use:
 """
 
 import sys
+import os
 import shutil
+import time
 from typing import List, Dict, Optional
 
 try:
@@ -76,14 +78,30 @@ def _c(text: str, *styles: str) -> str:
     return "".join(styles) + text + _Style.RESET
 
 class InteractiveSessionSelector:
-    """Interactive session selector with pagination"""
+    """Interactive session selector with pagination
 
-    def __init__(self, sessions: List[Dict], page_size: int = 3, extractor=None):
+    realtime: when True, recompute session info on each page display
+              without caching results back to self.sessions. This ensures
+              up-to-date info at the cost of latency proportional to
+              page_size.
+    """
+
+    def __init__(self, sessions: List[Dict], page_size: int = 3, extractor=None, realtime: bool = False, concurrency: Optional[int] = None, use_processes: bool = True):
         self.sessions = sessions
         self.page_size = page_size
         self.current_page = 0
         self.total_pages = (len(sessions) + page_size - 1) // page_size
         self.extractor = extractor
+        self.realtime = realtime
+        # 并发设置
+        if concurrency is None:
+            cpu = os.cpu_count() or 2
+            # 默认并发取 min(4, cpu)
+            self.concurrency = max(1, min(4, cpu))
+        else:
+            self.concurrency = max(1, int(concurrency))
+        self.use_processes = bool(use_processes)
+        self._last_page_elapsed_ms: Optional[int] = None
         self.show_help = False  # 是否显示帮助面板
 
     def _recompute_pagination(self) -> None:
@@ -102,18 +120,70 @@ class InteractiveSessionSelector:
         start_idx = self.current_page * self.page_size
         end_idx = min(start_idx + self.page_size, len(self.sessions))
 
-        for i in range(start_idx, end_idx):
-            session = self.sessions[i]
-            if session.get('needs_full_load') and self.extractor:
-                try:
-                    full_info = self.extractor.get_session_info(session['path'])
-                    full_info['path'] = session['path']
-                    self.sessions[i] = full_info
-                except Exception:
-                    pass
+        # 计算当前页的会话信息（实时）
+        page_sessions: List[Dict] = []
+        t0 = time.perf_counter()
+        if self.extractor and end_idx > start_idx:
+            # Always compute in realtime
+            indices = list(range(start_idx, end_idx))
+            base_items = [self.sessions[i] for i in indices]
+            try:
+                if self.use_processes and self.concurrency > 1:
+                    # 使用进程池并发计算
+                    from concurrent.futures import ProcessPoolExecutor
+                    from .extractor import process_session_worker
+                    args = [(k, item['path']) for k, item in enumerate(base_items)]
+                    results: Dict[int, Dict] = {}
+                    with ProcessPoolExecutor(max_workers=self.concurrency) as ex:
+                        for idx, info in ex.map(process_session_worker, args):
+                            info['path'] = base_items[idx]['path']
+                            results[idx] = info
+                    page_sessions = [results[i] if i in results else base_items[i] for i in range(len(base_items))]
+                elif self.concurrency > 1:
+                    # 使用线程池并发计算（适合IO）
+                    from concurrent.futures import ThreadPoolExecutor, as_completed
+                    def _compute(item: Dict) -> Dict:
+                        try:
+                            info = self.extractor.get_session_info(item['path'])
+                            info['path'] = item['path']
+                            return info
+                        except Exception:
+                            return item
+                    page_sessions = [None] * len(base_items)  # type: ignore[list-item]
+                    with ThreadPoolExecutor(max_workers=self.concurrency) as ex:
+                        future_to_idx = {ex.submit(_compute, it): i for i, it in enumerate(base_items)}
+                        for fut in as_completed(future_to_idx):
+                            i = future_to_idx[fut]
+                            try:
+                                page_sessions[i] = fut.result()
+                            except Exception:
+                                page_sessions[i] = base_items[i]
+                    page_sessions = [ps if ps is not None else base_items[i] for i, ps in enumerate(page_sessions)]
+                else:
+                    # 串行计算
+                    for item in base_items:
+                        try:
+                            info = self.extractor.get_session_info(item['path'])
+                            info['path'] = item['path']
+                            page_sessions.append(info)
+                        except Exception:
+                            page_sessions.append(item)
+            except Exception:
+                # 发生并发错误时回退到串行
+                for item in base_items:
+                    try:
+                        info = self.extractor.get_session_info(item['path'])
+                        info['path'] = item['path']
+                        page_sessions.append(info)
+                    except Exception:
+                        page_sessions.append(item)
+        else:
+            page_sessions = [self.sessions[i] for i in range(start_idx, end_idx)]
+        t1 = time.perf_counter()
+        self._last_page_elapsed_ms = int((t1 - t0) * 1000)
 
         for i in range(start_idx, end_idx):
-            session = self.sessions[i]
+            session = page_sessions[i - start_idx]
             local_idx = i - start_idx
             display_idx = local_idx + 1
             idx_render = _c(f"[{display_idx}] ", _Style.MAGENTA, _Style.BOLD)
@@ -141,14 +211,21 @@ class InteractiveSessionSelector:
         def _format_status_line() -> str:
             # 在更宽的屏幕显示更完整的信息，包括每页数量
             if width >= 70:
+                extra_perf = ""
+                if self._last_page_elapsed_ms is not None:
+                    mode = "进程" if (self.use_processes and self.concurrency > 1) else ("线程" if self.concurrency > 1 else "串行")
+                    extra_perf = f"  •  {mode}×{self.concurrency}  •  耗时 {self._last_page_elapsed_ms} ms"
                 return (
                     f"📄 第 {self.current_page + 1}/{self.total_pages} 页  •  "
-                    f"共 {len(self.sessions)} 会话  •  每页 {self.page_size} 条"
+                    f"共 {len(self.sessions)} 会话  •  每页 {self.page_size} 条" + extra_perf
                 )
             elif width >= 50:
+                perf = ""
+                if self._last_page_elapsed_ms is not None:
+                    perf = f"  •  {self._last_page_elapsed_ms}ms"
                 return (
                     f"📄 第 {self.current_page + 1}/{self.total_pages} 页  •  "
-                    f"共 {len(self.sessions)}  •  每页 {self.page_size}"
+                    f"共 {len(self.sessions)}  •  每页 {self.page_size}" + perf
                 )
             else:
                 return f"📄 {self.current_page + 1}/{self.total_pages}  •  {len(self.sessions)}会话"

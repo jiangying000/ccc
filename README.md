@@ -7,28 +7,36 @@
 
 智能提取和恢复Claude Code对话上下文的工具，优化token使用，支持超长对话的高效续接。
 
-## ⚡ 快速安装（推荐）
+## ⚡ 快速安装（推荐：uv）
 
-使用 pipx（隔离环境，不污染系统）：
+优先使用 uv（更快、更稳、隔离好）。从 PyPI 安装稳定版：
 
 ```bash
-python3 -m pip install --user pipx
-python3 -m pipx ensurepath
-pipx install ccc
+# 安装（推荐）
+uv tool install ccc
 
-# 升级到最新版
-pipx upgrade ccc
+# 升级
+uv tool upgrade ccc
+
+# 卸载
+uv tool uninstall ccc
 ```
 
-开发/本地源码安装：
+从 GitHub 指定版本（建议固定到 tag）安装：
 
 ```bash
-git clone https://github.com/jiangying000/ccc.git
-cd ccc
-pipx install .
+# 将 vX.Y.Z 替换为发布的版本标签
+uv tool install 'git+https://github.com/jiangying000/ccc.git@vX.Y.Z'
+```
 
-# 本地改动后快速重装
-pipx uninstall ccc && pipx install .
+无需安装的临时运行（CI/一次性使用）：
+
+```bash
+# 从 PyPI 直接运行
+uvx ccc --stats
+
+# 从 GitHub 指定版本临时运行
+uvx --from 'git+https://github.com/jiangying000/ccc.git@vX.Y.Z' ccc --stats
 ```
 
 ## ✨ 特性
@@ -44,17 +52,45 @@ pipx uninstall ccc && pipx install .
 
 ## 📦 安装
 
-### 方法1: PyPI安装（最简单）
+推荐顺序：
+
+1) uv（工具安装） → 最快、最稳、隔离好（上面“快速安装”）
+2) pipx（替代方案） → 也能隔离 CLI 工具
+3) pip（虚拟环境内） → 通用且可控
+4) 源码/脚本运行 → 本地开发或离线环境
+
+### 方法1: uv 工具安装（推荐）
 
 ```bash
-# 使用pip安装
+# 稳定版（PyPI）
+uv tool install ccc
+
+# 或固定 GitHub 版本（建议 pin 到 tag）
+uv tool install 'git+https://github.com/jiangying000/ccc.git@vX.Y.Z'
+```
+
+升级/卸载：
+
+```bash
+uv tool upgrade ccc
+uv tool uninstall ccc
+```
+
+### 方法2: PyPI 安装（pip/pipx）
+
+```bash
+# pip（建议在虚拟环境内）
+python3 -m venv .venv && source .venv/bin/activate
+pip install -U pip
 pip install ccc
 
-# 或使用pipx安装到隔离环境（推荐）
+# pipx（隔离安装 CLI）
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
 pipx install ccc
 ```
 
-### 方法2: pipx从源码安装
+### 方法3: 从源码安装（pipx/pip）
 
 使用pipx安装到隔离环境（不污染全局Python）：
 
@@ -71,7 +107,7 @@ git clone https://github.com/jiangying000/ccc.git
 pipx install ./ccc
 ```
 
-### 方法2: uvx（最快）
+### 方法4: uvx（无需安装，最快）
 
 使用uvx即时运行（无需安装）：
 
@@ -83,18 +119,7 @@ uvx --from git+https://github.com/jiangying000/ccc.git ccc
 alias ccc='uvx --from git+https://github.com/jiangying000/ccc.git ccc'
 ```
 
-### 方法3: uv工具安装
-
-```bash
-# 使用uv工具安装
-uv tool install git+https://github.com/jiangying000/ccc.git
-
-# 或从本地
-git clone https://github.com/jiangying000/ccc.git
-uv tool install ./ccc
-```
-
-### 方法4: pip安装
+### 方法5: pip 安装（虚拟环境内）
 
 ```bash
 # 在虚拟环境中安装（推荐）
@@ -106,7 +131,7 @@ pip install git+https://github.com/jiangying000/ccc.git
 pip install --user git+https://github.com/jiangying000/ccc.git
 ```
 
-### 方法5: 本地脚本安装
+### 方法6: 本地脚本安装（离线/保守）
 
 ```bash
 git clone https://github.com/jiangying000/ccc.git
@@ -230,6 +255,19 @@ ccc/
 - 不会上传或存储你的对话内容
 - 仅读取本地Claude会话文件
 - 使用用户级安装，不需要sudo权限
+
+### 安全与最佳实践
+
+- 优先安装稳定发布版（PyPI），或固定到 GitHub tag，避免直接跟随主分支。
+- 使用 `uv tool install` 或 `pipx install` 进行“工具级隔离安装”，不要用 `sudo pip install` 修改系统Python。
+- 在服务器/CI 中使用 `uvx` 或 `uv pip sync`（基于锁文件）确保环境可复现。
+- 升级遵循：先本地验证，再在生产环境升级；保留回滚方案（固定上一个版本）。
+
+### Windows/macOS/Linux 提示
+
+- Windows: 建议安装官方 Python，并在“可选功能”里勾选“Add python.exe to PATH”。PowerShell 使用 `py -m venv .venv` 创建 venv。
+- macOS: 使用 Homebrew 安装 uv：`brew install uv`；或使用官方安装脚本。
+- Linux: 推荐使用官方 uv 安装脚本；谨慎使用系统 Python 环境，尽量在虚拟环境或工具隔离中安装。
 
 ## 🤝 贡献
 
