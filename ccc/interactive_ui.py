@@ -205,7 +205,7 @@ class InteractiveSessionSelector:
                 "  [g] 第一页    [G] 最后一页",
                 f"  [j] 跳转至指定页  [s] 每页数量(当前: {self.page_size})",
                 "  [h] 关闭帮助  [q] 退出",
-                "  [q] 退出",
+                "  翻页耗时: 加载并计算当前页所用时间",
             ]
             for line in help_lines:
                 print(line, file=sys.stderr)
@@ -217,8 +217,7 @@ class InteractiveSessionSelector:
             if width >= 70:
                 extra_perf = ""
                 if self._last_page_elapsed_ms is not None:
-                    conc = self._last_page_concurrency if self._last_page_concurrency else 1
-                    extra_perf = f"  •  并发 {conc}  •  耗时 {self._last_page_elapsed_ms} ms"
+                    extra_perf = f"  •  翻页耗时 {self._last_page_elapsed_ms} ms"
                 return (
                     f"📄 第 {self.current_page + 1}/{self.total_pages} 页  •  "
                     f"共 {len(self.sessions)} 会话  •  每页 {self.page_size} 条" + extra_perf
@@ -226,8 +225,7 @@ class InteractiveSessionSelector:
             elif width >= 50:
                 perf = ""
                 if self._last_page_elapsed_ms is not None:
-                    conc = self._last_page_concurrency if self._last_page_concurrency else 1
-                    perf = f"  •  并发 {conc}  •  {self._last_page_elapsed_ms}ms"
+                    perf = f"  •  翻页耗时 {self._last_page_elapsed_ms}ms"
                 return (
                     f"📄 第 {self.current_page + 1}/{self.total_pages} 页  •  "
                     f"共 {len(self.sessions)}  •  每页 {self.page_size}" + perf
